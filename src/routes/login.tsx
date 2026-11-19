@@ -55,7 +55,7 @@ function Login() {
         toast.success("Password reset link sent.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error((err as { message?: string })?.message || "Something went wrong");
     } finally {
       setBusy(false);
     }

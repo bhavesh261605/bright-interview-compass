@@ -91,7 +91,7 @@ export function CandidateForm({ initial, onSaved }: { initial?: Candidate; onSav
       toast.success(initial ? "Candidate updated" : "Candidate added");
       onSaved(id!);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not save candidate");
+      toast.error((err as { message?: string })?.message || "Could not save candidate");
     } finally {
       setBusy(false);
     }

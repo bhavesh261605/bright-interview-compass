@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- AI calls live only in `src/lib/ai.server.ts`, loaded dynamically from server functions in `src/lib/interview.functions.ts`; it uses a `GEMINI_API_KEY` secret if present, else the Lovable gateway — keeps keys server-side and the provider swappable.
+- Salary alignment and prohibited-question checks are pure functions (`src/lib/salary.ts`, `src/lib/guardrails.ts`) covered by `src/lib/hr-rules.test.ts` — they must stay deterministic, never delegated to the AI.
+- Roles live in `public.user_roles`; data access is enforced by RLS via `can_access_candidate`/`has_role`, not just hidden buttons.

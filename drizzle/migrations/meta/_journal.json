@@ -8,6 +8,13 @@
       "when": 1795099830814,
       "tag": "0000_hr_interviewer_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795112071959,
+      "tag": "0001_candidate_owner_read",
+      "breakpoints": true
     }
   ]
 }
