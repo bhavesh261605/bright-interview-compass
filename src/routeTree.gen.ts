@@ -10,33 +10,250 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedReviewQueueRouteImport } from './routes/_authenticated/review-queue'
+import { Route as AuthenticatedSalaryBandsRouteImport } from './routes/_authenticated/salary-bands'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedCandidatesIndexRouteImport } from './routes/_authenticated/candidates.index'
+import { Route as AuthenticatedCandidatesCandidateIdRouteImport } from './routes/_authenticated/candidates.$candidateId'
+import { Route as AuthenticatedCandidatesNewRouteImport } from './routes/_authenticated/candidates.new'
+import { Route as AuthenticatedInterviewSummaryInterviewIdRouteImport } from './routes/_authenticated/interview-summary.$interviewId'
+import { Route as AuthenticatedInterviewsIndexRouteImport } from './routes/_authenticated/interviews.index'
+import { Route as AuthenticatedInterviewsInterviewIdRouteImport } from './routes/_authenticated/interviews.$interviewId'
+import { Route as AuthenticatedInterviewsNewRouteImport } from './routes/_authenticated/interviews.new'
+import { Route as AuthenticatedScorecardsIndexRouteImport } from './routes/_authenticated/scorecards.index'
+import { Route as AuthenticatedScorecardsScorecardIdRouteImport } from './routes/_authenticated/scorecards.$scorecardId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReviewQueueRoute =
+  AuthenticatedReviewQueueRouteImport.update({
+    id: '/review-queue',
+    path: '/review-queue',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSalaryBandsRoute =
+  AuthenticatedSalaryBandsRouteImport.update({
+    id: '/salary-bands',
+    path: '/salary-bands',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCandidatesIndexRoute =
+  AuthenticatedCandidatesIndexRouteImport.update({
+    id: '/candidates/',
+    path: '/candidates/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCandidatesCandidateIdRoute =
+  AuthenticatedCandidatesCandidateIdRouteImport.update({
+    id: '/candidates/$candidateId',
+    path: '/candidates/$candidateId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCandidatesNewRoute =
+  AuthenticatedCandidatesNewRouteImport.update({
+    id: '/candidates/new',
+    path: '/candidates/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInterviewSummaryInterviewIdRoute =
+  AuthenticatedInterviewSummaryInterviewIdRouteImport.update({
+    id: '/interview-summary/$interviewId',
+    path: '/interview-summary/$interviewId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInterviewsIndexRoute =
+  AuthenticatedInterviewsIndexRouteImport.update({
+    id: '/interviews/',
+    path: '/interviews/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInterviewsInterviewIdRoute =
+  AuthenticatedInterviewsInterviewIdRouteImport.update({
+    id: '/interviews/$interviewId',
+    path: '/interviews/$interviewId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInterviewsNewRoute =
+  AuthenticatedInterviewsNewRouteImport.update({
+    id: '/interviews/new',
+    path: '/interviews/new',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedScorecardsIndexRoute =
+  AuthenticatedScorecardsIndexRouteImport.update({
+    id: '/scorecards/',
+    path: '/scorecards/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedScorecardsScorecardIdRoute =
+  AuthenticatedScorecardsScorecardIdRouteImport.update({
+    id: '/scorecards/$scorecardId',
+    path: '/scorecards/$scorecardId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/review-queue': typeof AuthenticatedReviewQueueRoute
+  '/salary-bands': typeof AuthenticatedSalaryBandsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
+  '/candidates/new': typeof AuthenticatedCandidatesNewRoute
+  '/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
+  '/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
+  '/interviews/new': typeof AuthenticatedInterviewsNewRoute
+  '/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/candidates/': typeof AuthenticatedCandidatesIndexRoute
+  '/interviews/': typeof AuthenticatedInterviewsIndexRoute
+  '/scorecards/': typeof AuthenticatedScorecardsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/review-queue': typeof AuthenticatedReviewQueueRoute
+  '/salary-bands': typeof AuthenticatedSalaryBandsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
+  '/candidates/new': typeof AuthenticatedCandidatesNewRoute
+  '/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
+  '/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
+  '/interviews/new': typeof AuthenticatedInterviewsNewRoute
+  '/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/candidates': typeof AuthenticatedCandidatesIndexRoute
+  '/interviews': typeof AuthenticatedInterviewsIndexRoute
+  '/scorecards': typeof AuthenticatedScorecardsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/review-queue': typeof AuthenticatedReviewQueueRoute
+  '/_authenticated/salary-bands': typeof AuthenticatedSalaryBandsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
+  '/_authenticated/candidates/new': typeof AuthenticatedCandidatesNewRoute
+  '/_authenticated/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
+  '/_authenticated/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
+  '/_authenticated/interviews/new': typeof AuthenticatedInterviewsNewRoute
+  '/_authenticated/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
+  '/_authenticated/interviews/': typeof AuthenticatedInterviewsIndexRoute
+  '/_authenticated/scorecards/': typeof AuthenticatedScorecardsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/reset-password'
+    | '/analytics'
+    | '/dashboard'
+    | '/review-queue'
+    | '/salary-bands'
+    | '/settings'
+    | '/candidates/$candidateId'
+    | '/candidates/new'
+    | '/interview-summary/$interviewId'
+    | '/interviews/$interviewId'
+    | '/interviews/new'
+    | '/scorecards/$scorecardId'
+    | '/candidates/'
+    | '/interviews/'
+    | '/scorecards/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/reset-password'
+    | '/analytics'
+    | '/dashboard'
+    | '/review-queue'
+    | '/salary-bands'
+    | '/settings'
+    | '/candidates/$candidateId'
+    | '/candidates/new'
+    | '/interview-summary/$interviewId'
+    | '/interviews/$interviewId'
+    | '/interviews/new'
+    | '/scorecards/$scorecardId'
+    | '/candidates'
+    | '/interviews'
+    | '/scorecards'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/reset-password'
+    | '/_authenticated/analytics'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/review-queue'
+    | '/_authenticated/salary-bands'
+    | '/_authenticated/settings'
+    | '/_authenticated/candidates/$candidateId'
+    | '/_authenticated/candidates/new'
+    | '/_authenticated/interview-summary/$interviewId'
+    | '/_authenticated/interviews/$interviewId'
+    | '/_authenticated/interviews/new'
+    | '/_authenticated/scorecards/$scorecardId'
+    | '/_authenticated/candidates/'
+    | '/_authenticated/interviews/'
+    | '/_authenticated/scorecards/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +265,175 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/review-queue': {
+      id: '/_authenticated/review-queue'
+      path: '/review-queue'
+      fullPath: '/review-queue'
+      preLoaderRoute: typeof AuthenticatedReviewQueueRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/salary-bands': {
+      id: '/_authenticated/salary-bands'
+      path: '/salary-bands'
+      fullPath: '/salary-bands'
+      preLoaderRoute: typeof AuthenticatedSalaryBandsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidates/': {
+      id: '/_authenticated/candidates/'
+      path: '/candidates'
+      fullPath: '/candidates/'
+      preLoaderRoute: typeof AuthenticatedCandidatesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidates/$candidateId': {
+      id: '/_authenticated/candidates/$candidateId'
+      path: '/candidates/$candidateId'
+      fullPath: '/candidates/$candidateId'
+      preLoaderRoute: typeof AuthenticatedCandidatesCandidateIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidates/new': {
+      id: '/_authenticated/candidates/new'
+      path: '/candidates/new'
+      fullPath: '/candidates/new'
+      preLoaderRoute: typeof AuthenticatedCandidatesNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/interview-summary/$interviewId': {
+      id: '/_authenticated/interview-summary/$interviewId'
+      path: '/interview-summary/$interviewId'
+      fullPath: '/interview-summary/$interviewId'
+      preLoaderRoute: typeof AuthenticatedInterviewSummaryInterviewIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/interviews/': {
+      id: '/_authenticated/interviews/'
+      path: '/interviews'
+      fullPath: '/interviews/'
+      preLoaderRoute: typeof AuthenticatedInterviewsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/interviews/$interviewId': {
+      id: '/_authenticated/interviews/$interviewId'
+      path: '/interviews/$interviewId'
+      fullPath: '/interviews/$interviewId'
+      preLoaderRoute: typeof AuthenticatedInterviewsInterviewIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/interviews/new': {
+      id: '/_authenticated/interviews/new'
+      path: '/interviews/new'
+      fullPath: '/interviews/new'
+      preLoaderRoute: typeof AuthenticatedInterviewsNewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/scorecards/': {
+      id: '/_authenticated/scorecards/'
+      path: '/scorecards'
+      fullPath: '/scorecards/'
+      preLoaderRoute: typeof AuthenticatedScorecardsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/scorecards/$scorecardId': {
+      id: '/_authenticated/scorecards/$scorecardId'
+      path: '/scorecards/$scorecardId'
+      fullPath: '/scorecards/$scorecardId'
+      preLoaderRoute: typeof AuthenticatedScorecardsScorecardIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedReviewQueueRoute: typeof AuthenticatedReviewQueueRoute
+  AuthenticatedSalaryBandsRoute: typeof AuthenticatedSalaryBandsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedCandidatesCandidateIdRoute: typeof AuthenticatedCandidatesCandidateIdRoute
+  AuthenticatedCandidatesNewRoute: typeof AuthenticatedCandidatesNewRoute
+  AuthenticatedInterviewSummaryInterviewIdRoute: typeof AuthenticatedInterviewSummaryInterviewIdRoute
+  AuthenticatedInterviewsInterviewIdRoute: typeof AuthenticatedInterviewsInterviewIdRoute
+  AuthenticatedInterviewsNewRoute: typeof AuthenticatedInterviewsNewRoute
+  AuthenticatedScorecardsScorecardIdRoute: typeof AuthenticatedScorecardsScorecardIdRoute
+  AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
+  AuthenticatedInterviewsIndexRoute: typeof AuthenticatedInterviewsIndexRoute
+  AuthenticatedScorecardsIndexRoute: typeof AuthenticatedScorecardsIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedReviewQueueRoute: AuthenticatedReviewQueueRoute,
+  AuthenticatedSalaryBandsRoute: AuthenticatedSalaryBandsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedCandidatesCandidateIdRoute:
+    AuthenticatedCandidatesCandidateIdRoute,
+  AuthenticatedCandidatesNewRoute: AuthenticatedCandidatesNewRoute,
+  AuthenticatedInterviewSummaryInterviewIdRoute:
+    AuthenticatedInterviewSummaryInterviewIdRoute,
+  AuthenticatedInterviewsInterviewIdRoute:
+    AuthenticatedInterviewsInterviewIdRoute,
+  AuthenticatedInterviewsNewRoute: AuthenticatedInterviewsNewRoute,
+  AuthenticatedScorecardsScorecardIdRoute:
+    AuthenticatedScorecardsScorecardIdRoute,
+  AuthenticatedCandidatesIndexRoute: AuthenticatedCandidatesIndexRoute,
+  AuthenticatedInterviewsIndexRoute: AuthenticatedInterviewsIndexRoute,
+  AuthenticatedScorecardsIndexRoute: AuthenticatedScorecardsIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
