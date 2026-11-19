@@ -4,6 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RECOMMENDATION, REVIEW_STATUS, SALARY_ALIGNMENT, formatDate, formatMoney } from "@/lib/labels";
 import { Empty, Loading, PageHeader, Pill, StatusPill } from "@/components/app/ui-bits";
+import { AtsPush } from "@/components/app/ats-push";
+import { Transcript } from "@/components/app/transcript";
 import { ReviewActions } from "@/components/app/review-actions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -63,11 +65,19 @@ function ReviewQueue() {
                   {flags.length > 0 && (
                     <div>
                       <div className="eyebrow mb-1">Evidence</div>
-                      {flags.slice(0, 2).map((f, i) => (
-                        <p key={i} className="text-xs"><b>{f.flag}:</b> <i className="text-muted-foreground">“{f.evidence}”</i></p>
+                      {flags.map((f, i) => (
+                        <p key={i} className="text-xs"><b>Red flag — {f.flag}:</b> <i className="text-muted-foreground">“{f.evidence}”</i></p>
                       ))}
                     </div>
                   )}
+                </div>
+                <details className="mt-3 rounded-md border p-3">
+                  <summary className="cursor-pointer text-sm font-medium">Full interview transcript</summary>
+                  <div className="mt-3"><Transcript interviewId={s.interview_id} /></div>
+                </details>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <AtsPush scorecardId={s.id} />
+                  <Link to="/scorecards/$scorecardId" params={{ scorecardId: s.id }} className="inline-flex items-center rounded-md border px-3 text-sm hover:bg-muted">Open scorecard</Link>
                 </div>
                 {tab === "open" && <div className="mt-4 border-t pt-4"><ReviewActions scorecardId={s.id} /></div>}
               </div>

@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Loading } from "@/components/app/ui-bits";
+import { ViewSwitcher } from "@/components/app/view-switcher";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -52,7 +53,8 @@ function Layout() {
   });
 
   if (loading) return <Loading />;
-  if (!user) return <Navigate to="/login" />;
+  // HR role gate: candidates/visitors never reach HR views; RLS enforces the same server-side.
+  if (!user) return <Navigate to="/" />;
   if (roles.length === 0)
     return (
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
@@ -117,6 +119,7 @@ function Layout() {
         <header className="no-print sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur">
           <button className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
           <h1 className="text-sm font-semibold">{title}</h1>
+          <div className="hidden sm:block"><ViewSwitcher /></div>
           <form
             className="ml-auto hidden w-72 md:block"
             onSubmit={(e) => {

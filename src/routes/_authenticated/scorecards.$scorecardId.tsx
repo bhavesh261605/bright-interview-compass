@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Printer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScorecardReport } from "@/components/app/scorecard-report";
+import { AtsPush } from "@/components/app/ats-push";
 import { ReviewActions } from "@/components/app/review-actions";
 import { Empty, Loading, PageHeader, Section } from "@/components/app/ui-bits";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ function ScorecardDetail() {
       <PageHeader
         title={`Scorecard — ${(sc.candidates as { full_name: string } | null)?.full_name}`}
         description="Confidential. AI recommendation is advisory; humans make hiring decisions."
-        actions={<Button variant="outline" className="no-print" onClick={exportPdf}><Printer className="mr-1 h-4 w-4" />Export PDF</Button>}
+        actions={<div className="no-print flex gap-2"><AtsPush scorecardId={sc.id} /><Button variant="outline" className="no-print" onClick={exportPdf}><Printer className="mr-1 h-4 w-4" />Export PDF</Button></div>}
       />
       <div className="no-print mb-4 grid gap-4 lg:grid-cols-2">
         <Section title="Human review">

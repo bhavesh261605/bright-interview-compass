@@ -24,6 +24,33 @@ export const FOCUS = {
   ],
 };
 
+/** Separate question banks per category. Required coverage: background, notice/availability,
+ * motivation, culture fit, STAR project questions, salary expectations. */
+export const QUESTION_SETS: Record<"fresher" | "experienced", Record<SectionKey, string[]>> = {
+  fresher: {
+    introduction: ["Could you introduce yourself and tell me what drew you to this role?"],
+    background: ["Which subjects or coursework from your degree are most relevant to this role?", "Tell me about any internship or training you completed."],
+    motivation: ["Why do you want to start your career in this field?", "Where would you like to be in two to three years?"],
+    projects: ["Describe an academic or internship project: what was the situation, your task, the actions you personally took, and the result?"],
+    collaboration: ["Tell me about a group assignment where the team disagreed — how did you handle it?", "What kind of team environment helps you do your best work?"],
+    competency: ["How do you approach learning a tool or skill you have never used before?"],
+    availability: ["When would you be available to join, and do you have any pending exams or commitments?"],
+    salary: ["What are your salary expectations for this entry-level role?"],
+    closing: ["What questions do you have about the role or the team?"],
+  },
+  experienced: {
+    introduction: ["Could you walk me through your career so far and why you're exploring this role?"],
+    background: ["What are your current responsibilities and the scope of your role?", "Which achievement in your current job are you most proud of?"],
+    motivation: ["What is prompting you to look for a change now?", "How does this role fit your career progression?"],
+    projects: ["Describe a project you owned: the situation, your task, the actions you took and the measurable result (STAR)."],
+    collaboration: ["Tell me about a conflict with a colleague or stakeholder and how you resolved it.", "How do you prefer to give and receive feedback?"],
+    competency: ["How do you prioritise when several urgent tasks land at once?"],
+    availability: ["What is your notice period, and is it negotiable? When could you realistically join?"],
+    salary: ["What is your expected annual compensation for this role?"],
+    closing: ["What would you like to know about the role, team or next steps?"],
+  },
+};
+
 export interface InterviewState {
   topics_covered: string[];
   unresolved_followups: string[];
@@ -58,6 +85,9 @@ ${focus}
 
 SECTIONS (adapt order to experience level):
 ${sections}
+
+QUESTION BANK FOR THIS CATEGORY (base your questions on these; rephrase and follow up naturally):
+${SECTIONS.map((s) => `${s.key}: ${QUESTION_SETS[p.category][s.key].join(" | ")}`).join("\n")}
 
 INTERVIEW STATE:
 - Current section: ${p.currentSection}

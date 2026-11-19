@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { EXPERIENCE, INTERVIEW_STATUS, formatDate } from "@/lib/labels";
 import { Empty, Loading, PageHeader, StatusPill } from "@/components/app/ui-bits";
 import { Button } from "@/components/ui/button";
+import { CandidateLink } from "@/components/app/candidate-link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/interviews/")({
@@ -25,7 +26,7 @@ function Interviews() {
       {q.isLoading ? <Loading /> : (q.data ?? []).length === 0 ? <Empty title="No interviews yet">Start one from a candidate's profile.</Empty> : (
         <div className="surface overflow-x-auto">
           <Table>
-            <TableHeader><TableRow><TableHead>Candidate</TableHead><TableHead>Role</TableHead><TableHead>Category</TableHead><TableHead>Started</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Candidate</TableHead><TableHead>Role</TableHead><TableHead>Category</TableHead><TableHead>Started</TableHead><TableHead>Status</TableHead><TableHead>Candidate view</TableHead></TableRow></TableHeader>
             <TableBody>
               {q.data!.map((i) => (
                 <TableRow key={i.id}>
@@ -38,6 +39,7 @@ function Interviews() {
                   <TableCell>{EXPERIENCE[i.experience_category]}</TableCell>
                   <TableCell className="text-muted-foreground">{formatDate(i.started_at)}</TableCell>
                   <TableCell><StatusPill map={INTERVIEW_STATUS} value={i.status} /></TableCell>
+                  <TableCell>{i.status === "in_progress" ? <CandidateLink compact token={i.invite_token} /> : <span className="text-xs text-muted-foreground">Closed</span>}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

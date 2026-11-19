@@ -18,6 +18,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedReviewQueueRouteImport } from './routes/_authenticated/review-queue'
 import { Route as AuthenticatedSalaryBandsRouteImport } from './routes/_authenticated/salary-bands'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as InterviewTokenRouteImport } from './routes/interview.$token'
 import { Route as AuthenticatedCandidatesIndexRouteImport } from './routes/_authenticated/candidates.index'
 import { Route as AuthenticatedCandidatesCandidateIdRouteImport } from './routes/_authenticated/candidates.$candidateId'
 import { Route as AuthenticatedCandidatesNewRouteImport } from './routes/_authenticated/candidates.new'
@@ -73,6 +74,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const InterviewTokenRoute = InterviewTokenRouteImport.update({
+  id: '/interview/$token',
+  path: '/interview/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCandidatesIndexRoute =
   AuthenticatedCandidatesIndexRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/review-queue': typeof AuthenticatedReviewQueueRoute
   '/salary-bands': typeof AuthenticatedSalaryBandsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/interview/$token': typeof InterviewTokenRoute
   '/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
   '/candidates/new': typeof AuthenticatedCandidatesNewRoute
   '/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/review-queue': typeof AuthenticatedReviewQueueRoute
   '/salary-bands': typeof AuthenticatedSalaryBandsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/interview/$token': typeof InterviewTokenRoute
   '/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
   '/candidates/new': typeof AuthenticatedCandidatesNewRoute
   '/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated/review-queue': typeof AuthenticatedReviewQueueRoute
   '/_authenticated/salary-bands': typeof AuthenticatedSalaryBandsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/interview/$token': typeof InterviewTokenRoute
   '/_authenticated/candidates/$candidateId': typeof AuthenticatedCandidatesCandidateIdRoute
   '/_authenticated/candidates/new': typeof AuthenticatedCandidatesNewRoute
   '/_authenticated/interview-summary/$interviewId': typeof AuthenticatedInterviewSummaryInterviewIdRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/review-queue'
     | '/salary-bands'
     | '/settings'
+    | '/interview/$token'
     | '/candidates/$candidateId'
     | '/candidates/new'
     | '/interview-summary/$interviewId'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/review-queue'
     | '/salary-bands'
     | '/settings'
+    | '/interview/$token'
     | '/candidates/$candidateId'
     | '/candidates/new'
     | '/interview-summary/$interviewId'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/review-queue'
     | '/_authenticated/salary-bands'
     | '/_authenticated/settings'
+    | '/interview/$token'
     | '/_authenticated/candidates/$candidateId'
     | '/_authenticated/candidates/new'
     | '/_authenticated/interview-summary/$interviewId'
@@ -254,6 +266,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  InterviewTokenRoute: typeof InterviewTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -320,6 +333,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/interview/$token': {
+      id: '/interview/$token'
+      path: '/interview/$token'
+      fullPath: '/interview/$token'
+      preLoaderRoute: typeof InterviewTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/candidates/': {
       id: '/_authenticated/candidates/'
@@ -434,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  InterviewTokenRoute: InterviewTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

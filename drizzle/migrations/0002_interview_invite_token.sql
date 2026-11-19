@@ -1,0 +1,2 @@
+ALTER TABLE public.interviews ADD COLUMN IF NOT EXISTS invite_token uuid NOT NULL DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS interviews_invite_token_key ON public.interviews(invite_token);

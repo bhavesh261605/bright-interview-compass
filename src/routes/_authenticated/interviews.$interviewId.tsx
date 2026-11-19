@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { CandidateLink } from "@/components/app/candidate-link";
 
 export const Route = createFileRoute("/_authenticated/interviews/$interviewId")({
   head: () => ({ meta: [{ title: "Live interview — Aria HR" }, { name: "description", content: "AI-led HR interview room." }] }),
@@ -145,6 +146,7 @@ function LiveInterview() {
             <div className="text-xs text-muted-foreground">{(data.job_roles as { title: string } | null)?.title ?? data.interview_type} · {EXPERIENCE[data.experience_category]}</div>
           </div>
           <div className="flex items-center gap-3">
+            <CandidateLink compact token={data.invite_token} />
             <span className={cn("flex items-center gap-1 text-xs tabular", elapsedS > totalS ? "text-destructive" : "text-muted-foreground")}>
               <Clock className="h-3.5 w-3.5" />{fmt(elapsedS)} / {data.duration_minutes}:00
             </span>

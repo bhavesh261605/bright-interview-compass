@@ -33,3 +33,5 @@ use the editor.
 - AI calls live only in `src/lib/ai.server.ts`, loaded dynamically from server functions in `src/lib/interview.functions.ts`; it uses a `GEMINI_API_KEY` secret if present, else the Lovable gateway — keeps keys server-side and the provider swappable.
 - Salary alignment and prohibited-question checks are pure functions (`src/lib/salary.ts`, `src/lib/guardrails.ts`) covered by `src/lib/hr-rules.test.ts` — they must stay deterministic, never delegated to the AI.
 - Roles live in `public.user_roles`; data access is enforced by RLS via `can_access_candidate`/`has_role`, not just hidden buttons.
+- Candidates join via `/interview/$token` (interviews.invite_token) with no account; token-based server functions use the admin client and return only candidate-safe fields — HR data must never be added to those responses.
+- Demo entry (`/`) offers one-click HR demo sign-in and demo presets via public server functions in `interview.functions.ts`; remove or gate them before a real production launch.

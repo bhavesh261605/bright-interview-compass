@@ -34,7 +34,7 @@ function profileText(c: any) {
   return parts.join("\n");
 }
 
-async function audit(sb: SB, userId: string, action: string, type: string, id: string | null, metadata = {}) {
+async function audit(sb: SB, userId: string | null, action: string, type: string, id: string | null, metadata = {}) {
   await sb.from("audit_logs").insert({ actor_id: userId, action, entity_type: type, entity_id: id, metadata });
 }
 
@@ -107,18 +107,8 @@ const TurnSchema = z.object({
   interview_complete: z.boolean().default(false),
 });
 
-export const interviewTurn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        interviewId: z.string().uuid(),
-        text: z.string().trim().min(1).max(4000).optional(),
-        clientMessageId: z.string().min(6).max(80).optional(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data, context }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function turnHandler({ data, context }: { data: { interviewId: string; text?: string | undefined; clientMessageId?: string | undefined }; context: { supabase: any; userId: string | null } }) {
     const sb = context.supabase as SB;
     const { data: iv } = await sb
       .from("interviews")
@@ -250,7 +240,20 @@ export const interviewTurn = createServerFn({ method: "POST" })
       .update({ current_section: section, state: { ...newState, ai_marked_complete: t.interview_complete } })
       .eq("id", iv.id);
     return { ok: true as const, generated: true, complete: t.interview_complete };
-  });
+}
+
+export const interviewTurn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        interviewId: z.string().uuid(),
+        text: z.string().trim().min(1).max(4000).optional(),
+        clientMessageId: z.string().min(6).max(80).optional(),
+      })
+      .parse(d),
+  )
+  .handler(({ data, context }) => turnHandler({ data, context }));
 
 /* ---------------- end + evaluate ---------------- */
 const CompSchema = z.object({
@@ -286,10 +289,8 @@ const EvalSchema = z.object({
   ai_notes: z.string().default(""),
 });
 
-export const endAndEvaluate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ interviewId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function evaluateHandler({ data, context }: { data: { interviewId: string }; context: { supabase: any; userId: string | null } }) {
     const sb = context.supabase as SB;
     const { data: iv } = await sb
       .from("interviews")
@@ -461,7 +462,12 @@ export const endAndEvaluate = createServerFn({ method: "POST" })
       .eq("id", iv.candidate_id);
     await audit(sb, context.userId, "evaluation.saved", "interview", iv.id, { reviewRequired, alignment });
     return { ok: true as const };
-  });
+}
+
+export const endAndEvaluate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ interviewId: z.string().uuid() }).parse(d))
+  .handler(({ data, context }) => evaluateHandler({ data, context }));
 
 /* ---------------- salary validation ---------------- */
 export const validateSalary = createServerFn({ method: "POST" })
@@ -534,4 +540,122 @@ export const recordReview = createServerFn({ method: "POST" })
     await sb.from("candidates").update({ status: candStatus }).eq("id", sc.candidate_id);
     await audit(sb, context.userId, `review.${data.action}`, "scorecard", sc.id, { from: sc.reviewer_status, to: newStatus });
     return { ok: true };
+  });
+
+/* ---------------- candidate (token-based, no login) ---------------- */
+const TokenSchema = z.object({ token: z.string().uuid() });
+async function adminByToken(token: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("interviews").select("id, status").eq("invite_token", token).maybeSingle();
+  return { admin: supabaseAdmin as SB, iv: data as { id: string; status: string } | null };
+}
+
+/** Candidate-safe view: no notes, salary bands, scores, flags or HR controls. */
+export const getCandidateSession = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => TokenSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { admin, iv } = await adminByToken(data.token);
+    if (!iv) return null;
+    const { data: row } = await admin
+      .from("interviews")
+      .select("id, status, current_section, experience_category, duration_minutes, started_at, state, candidates(full_name), job_roles(title)")
+      .eq("id", iv.id)
+      .single();
+    const { data: msgs } = await admin
+      .from("interview_messages")
+      .select("id, sender_type, message, sequence_number")
+      .eq("interview_id", iv.id)
+      .order("sequence_number");
+    return {
+      status: row.status as string,
+      section: row.current_section as string,
+      category: row.experience_category as "fresher" | "experienced",
+      durationMinutes: row.duration_minutes as number,
+      startedAt: row.started_at as string,
+      aiDone: !!row.state?.ai_marked_complete,
+      candidateName: (row.candidates?.full_name as string) ?? "Candidate",
+      roleTitle: (row.job_roles?.title as string) ?? "the role",
+      messages: (msgs ?? []) as { id: string; sender_type: string; message: string; sequence_number: number }[],
+    };
+  });
+
+export const candidateTurn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ token: z.string().uuid(), text: z.string().trim().min(1).max(4000).optional(), clientMessageId: z.string().min(6).max(80).optional() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { admin, iv } = await adminByToken(data.token);
+    if (!iv) return { ok: false as const, error: "This interview link is invalid." };
+    return turnHandler({ data: { interviewId: iv.id, text: data.text, clientMessageId: data.clientMessageId }, context: { supabase: admin, userId: null } });
+  });
+
+export const candidateFinish = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => TokenSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { admin, iv } = await adminByToken(data.token);
+    if (!iv) return { ok: false as const };
+    const r = await evaluateHandler({ data: { interviewId: iv.id }, context: { supabase: admin, userId: null } });
+    // Never leak evaluation details to the candidate.
+    return { ok: r.ok };
+  });
+
+/* ---------------- demo helpers (competition demo; no login wall) ---------------- */
+const DEMO_EMAIL = "hr-demo@aria-hr.demo";
+
+/** One-click HR demo sign-in: ensures a demo admin exists and returns a one-time login token. */
+export const demoHrSignIn = createServerFn({ method: "POST" }).handler(async () => {
+  const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+  const link = async () => a.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
+  let r = await link();
+  if (r.error) {
+    await a.auth.admin.createUser({ email: DEMO_EMAIL, email_confirm: true, user_metadata: { full_name: "HR Demo" } });
+    r = await link();
+  }
+  const uid = r.data.user?.id;
+  if (!uid || !r.data.properties?.hashed_token) throw new Error("Demo sign-in unavailable");
+  await a.from("user_roles").upsert([{ user_id: uid, role: "admin" }, { user_id: uid, role: "recruiter" }, { user_id: uid, role: "reviewer" }], { onConflict: "user_id,role", ignoreDuplicates: true });
+  return { tokenHash: r.data.properties.hashed_token };
+});
+
+/** Public demo presets: only candidate first names + invite tokens; no HR data. */
+export const getDemoPresets = createServerFn({ method: "POST" }).handler(async () => {
+  const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+  const { data: active } = await a.from("interviews").select("invite_token, candidates(full_name)").eq("status", "in_progress").order("started_at", { ascending: false }).limit(3);
+  const { data: done } = await a.from("scorecards").select("id, candidates(full_name)").eq("review_required", true).order("created_at", { ascending: false }).limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const first = (c: any) => String(c?.full_name ?? "Candidate").split(" ")[0];
+  return {
+    active: (active ?? []).map((r) => ({ token: r.invite_token as string, name: first(r.candidates) })),
+    exception: done?.[0] ? { scorecardId: done[0].id as string, name: first(done[0].candidates) } : null,
+  };
+});
+
+/** Creates a brand-new demo candidate + interview and returns its invite token. */
+export const createFreshDemoSession = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ category: z.enum(["fresher", "experienced"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+    const { data: role } = await a.from("job_roles").select("id, title").order("created_at").limit(1).maybeSingle();
+    const { data: owner } = await a.from("user_roles").select("user_id").eq("role", "admin").limit(1).maybeSingle();
+    if (!owner) throw new Error("Sign in as HR Demo once first to set up the demo workspace.");
+    const exp = data.category === "fresher";
+    const { data: cand, error } = await a.from("candidates").insert({
+      full_name: exp ? "Demo Fresher" : "Demo Experienced",
+      email: `demo+${Date.now()}@aria-hr.demo`,
+      experience_level: data.category,
+      years_of_experience: exp ? 0 : 3,
+      job_role_id: role?.id ?? null,
+      status: "in_progress",
+      created_by: owner.user_id,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any).select("id").single();
+    if (error || !cand) throw new Error("Could not create demo candidate: " + (error?.message ?? ""));
+    const { data: iv, error: e2 } = await a.from("interviews").insert({
+      candidate_id: cand.id, job_role_id: role?.id ?? null, experience_category: data.category,
+      interview_type: "HR round", duration_minutes: 20, role_context: "", interviewer_id: owner.user_id,
+      state: { topics_covered: [], unresolved_followups: [], questions_asked: 0 },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any).select("invite_token").single();
+    if (e2 || !iv) throw new Error("Could not create demo interview: " + (e2?.message ?? ""));
+    return { token: (iv as { invite_token: string }).invite_token };
   });

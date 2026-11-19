@@ -257,6 +257,7 @@ export type Database = {
           id: string
           interview_type: string
           interviewer_id: string
+          invite_token: string
           job_role_id: string | null
           role_context: string | null
           started_at: string
@@ -273,6 +274,7 @@ export type Database = {
           id?: string
           interview_type?: string
           interviewer_id?: string
+          invite_token?: string
           job_role_id?: string | null
           role_context?: string | null
           started_at?: string
@@ -289,6 +291,7 @@ export type Database = {
           id?: string
           interview_type?: string
           interviewer_id?: string
+          invite_token?: string
           job_role_id?: string | null
           role_context?: string | null
           started_at?: string
