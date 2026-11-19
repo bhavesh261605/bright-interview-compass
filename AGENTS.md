@@ -30,7 +30,7 @@ use the editor.
 <!-- LOVABLE:END -->
 
 ## Project rules
-- AI calls live only in `src/lib/ai.server.ts`, loaded dynamically from server functions in `src/lib/interview.functions.ts`; it uses a `GEMINI_API_KEY` secret if present, else the Lovable gateway — keeps keys server-side and the provider swappable.
+- AI calls live only in `src/lib/ai.server.ts`, loaded dynamically from server functions in `src/lib/interview.functions.ts`; it calls Google Gemini directly with the `GEMINI_API_KEY` secret (no gateway fallback) — keeps the key server-side and runs on the user's own Gemini account.
 - Salary alignment and prohibited-question checks are pure functions (`src/lib/salary.ts`, `src/lib/guardrails.ts`) covered by `src/lib/hr-rules.test.ts` — they must stay deterministic, never delegated to the AI.
 - Roles live in `public.user_roles`; data access is enforced by RLS via `can_access_candidate`/`has_role`, not just hidden buttons.
 - Candidates join via `/interview/$token` (interviews.invite_token) with no account; token-based server functions use the admin client and return only candidate-safe fields — HR data must never be added to those responses.

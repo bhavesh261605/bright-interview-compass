@@ -18,24 +18,15 @@ function stripFences(s: string) {
 }
 
 /**
- * Calls Gemini. If a GEMINI_API_KEY secret is set, it calls Google directly
- * (model from GEMINI_MODEL or the app setting); otherwise Lovable's AI gateway.
+ * Calls Google Gemini directly with the GEMINI_API_KEY secret
+ * (model from GEMINI_MODEL or the app setting).
  */
 export async function callAIJson(messages: ChatMsg[], model: string): Promise<unknown> {
   const geminiKey = process.env['GEMINI_API_KEY'];
-  let url: string;
-  let headers: Record<string, string>;
-  let useModel = model;
-  if (geminiKey) {
-    url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    headers = { Authorization: `Bearer ${geminiKey}` };
-    useModel = process.env['GEMINI_MODEL'] || model.replace(/^google\//, "");
-  } else {
-    const key = process.env['LOVABLE_API_KEY'];
-    if (!key) throw new AIError(500, "AI is not configured for this app.");
-    url = "https://ai.gateway.lovable.dev/v1/chat/completions";
-    headers = { Authorization: `Bearer ${key}`, "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" };
-  }
+  if (!geminiKey) throw new AIError(500, "GEMINI_API_KEY is not configured for this app.");
+  const url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+  const headers: Record<string, string> = { Authorization: `Bearer ${geminiKey}`, "x-goog-api-key": geminiKey };
+  const useModel = process.env['GEMINI_MODEL'] || model.replace(/^google\//, "");
 
   const res = await fetch(url, {
     method: "POST",

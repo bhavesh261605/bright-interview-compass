@@ -101,8 +101,7 @@ function SettingsPage() {
               <SelectContent>{MODELS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Used for interviews and evaluations. Runs on built-in AI by default; if a GEMINI_API_KEY secret is added, calls go directly to
-              Google Gemini (optionally using GEMINI_MODEL). {!isAdmin && "Only admins can change this."}
+              Used for interviews and evaluations. Calls go directly to Google Gemini using your GEMINI_API_KEY (optionally overridden by GEMINI_MODEL). {!isAdmin && "Only admins can change this."}
             </p>
           </div>
         </Section>
