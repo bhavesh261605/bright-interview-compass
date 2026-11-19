@@ -1,3 +1,4 @@
+import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,10 +14,10 @@ export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Sign in — Aria HR" },
-      { name: "description", content: "Sign in to the Aria HR interviewer workspace." },
-      { property: "og:title", content: "Sign in — Aria HR" },
-      { property: "og:description", content: "Sign in to the Aria HR interviewer workspace." },
+      { title: "Sign in — WAE HR" },
+      { name: "description", content: "Sign in to the WAE HR interviewer workspace." },
+      { property: "og:title", content: "Sign in — WAE HR" },
+      { property: "og:description", content: "Sign in to the WAE HR interviewer workspace." },
     ],
   }),
   component: Login,
@@ -70,8 +71,8 @@ function Login() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden flex-col justify-between bg-sidebar p-10 text-sidebar-foreground lg:flex">
         <div className="flex items-center gap-2 text-sidebar-accent-foreground">
-          <div className="grid h-8 w-8 place-items-center rounded-md bg-sidebar-primary font-semibold text-sidebar-primary-foreground">A</div>
-          <span className="font-semibold">Aria HR</span>
+          <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
+          <span className="font-semibold">WAE HR</span>
         </div>
         <div className="max-w-md">
           <h1 className="text-3xl font-semibold leading-tight text-sidebar-accent-foreground">

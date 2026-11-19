@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/candidates/$candidateId")({
-  head: () => ({ meta: [{ title: "Candidate — Aria HR" }, { name: "description", content: "Candidate profile and interview history." }] }),
+  head: () => ({ meta: [{ title: "Candidate — WAE HR" }, { name: "description", content: "Candidate profile and interview history." }] }),
   component: CandidateDetail,
 });
 

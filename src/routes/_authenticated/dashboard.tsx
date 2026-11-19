@@ -8,7 +8,7 @@ import { CANDIDATE_STATUS, RECOMMENDATION, formatDate, passThroughRate } from "@
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Aria HR" }, { name: "description", content: "Recruiter dashboard for HR interviews." }] }),
+  head: () => ({ meta: [{ title: "Dashboard — WAE HR" }, { name: "description", content: "Recruiter dashboard for HR interviews." }] }),
   component: Dashboard,
 });
 

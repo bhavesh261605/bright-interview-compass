@@ -1,3 +1,4 @@
+import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -14,9 +15,9 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Aria HR — AI HR Interviewer demo" },
+      { title: "WAE HR — AI HR Interviewer demo" },
       { name: "description", content: "Switch between the candidate interview room and the HR dashboard in one click." },
-      { property: "og:title", content: "Aria HR — AI HR Interviewer demo" },
+      { property: "og:title", content: "WAE HR — AI HR Interviewer demo" },
       { property: "og:description", content: "Switch between the candidate interview room and the HR dashboard in one click." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -67,8 +68,8 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur">
-        <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">A</div>
-        <span className="font-semibold">Aria HR</span>
+        <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
+        <span className="font-semibold">WAE HR</span>
         <div className="ml-auto flex items-center gap-2">
           <ViewSwitcher />
           {hr ? (

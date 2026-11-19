@@ -1,3 +1,4 @@
+import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/interview/$token")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Your interview — Aria HR" },
+      { title: "Your interview — WAE HR" },
       { name: "description", content: "Private HR interview room. No account needed." },
       { name: "robots", content: "noindex" },
     ],
@@ -94,8 +95,8 @@ function CandidateRoom() {
   const shell = (body: React.ReactNode) => (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex h-14 items-center gap-3 border-b bg-card px-4">
-        <div className="grid h-7 w-7 place-items-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">A</div>
-        <span className="font-semibold">Aria HR · Interview</span>
+        <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
+        <span className="font-semibold">WAE HR · Interview</span>
         <div className="ml-auto"><ViewSwitcher /></div>
       </header>
       {body}

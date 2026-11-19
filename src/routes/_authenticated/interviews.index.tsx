@@ -8,7 +8,7 @@ import { CandidateLink } from "@/components/app/candidate-link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/interviews/")({
-  head: () => ({ meta: [{ title: "Interviews — Aria HR" }, { name: "description", content: "All AI-led HR interviews." }] }),
+  head: () => ({ meta: [{ title: "Interviews — WAE HR" }, { name: "description", content: "All AI-led HR interviews." }] }),
   component: Interviews,
 });
 

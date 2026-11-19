@@ -10,7 +10,7 @@ import { ReviewActions } from "@/components/app/review-actions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/review-queue")({
-  head: () => ({ meta: [{ title: "Review queue — Aria HR" }, { name: "description", content: "Cases that need a human decision." }] }),
+  head: () => ({ meta: [{ title: "Review queue — WAE HR" }, { name: "description", content: "Cases that need a human decision." }] }),
   component: ReviewQueue,
 });
 

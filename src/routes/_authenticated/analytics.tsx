@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/analytics")({
-  head: () => ({ meta: [{ title: "Analytics — Aria HR" }, { name: "description", content: "Hiring funnel analytics." }] }),
+  head: () => ({ meta: [{ title: "Analytics — WAE HR" }, { name: "description", content: "Hiring funnel analytics." }] }),
   component: Analytics,
 });
 

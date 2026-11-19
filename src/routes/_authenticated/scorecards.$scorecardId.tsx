@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/scorecards/$scorecardId")({
-  head: () => ({ meta: [{ title: "Scorecard — Aria HR" }, { name: "description", content: "Detailed HR scorecard report." }] }),
+  head: () => ({ meta: [{ title: "Scorecard — WAE HR" }, { name: "description", content: "Detailed HR scorecard report." }] }),
   component: ScorecardDetail,
 });
 

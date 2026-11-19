@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export const Route = createFileRoute("/_authenticated/interviews/new")({
   validateSearch: z.object({ candidateId: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Interview setup — Aria HR" }, { name: "description", content: "Configure an AI HR interview." }] }),
+  head: () => ({ meta: [{ title: "Interview setup — WAE HR" }, { name: "description", content: "Configure an AI HR interview." }] }),
   component: Setup,
 });
 

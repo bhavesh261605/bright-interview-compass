@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Settings — Aria HR" }, { name: "description", content: "Workspace settings." }] }),
+  head: () => ({ meta: [{ title: "Settings — WAE HR" }, { name: "description", content: "Workspace settings." }] }),
   component: SettingsPage,
 });
 

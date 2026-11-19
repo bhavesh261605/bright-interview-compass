@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/scorecards/")({
-  head: () => ({ meta: [{ title: "Scorecards — Aria HR" }, { name: "description", content: "HR interview scorecards." }] }),
+  head: () => ({ meta: [{ title: "Scorecards — WAE HR" }, { name: "description", content: "HR interview scorecards." }] }),
   component: Scorecards,
 });
 

@@ -1,3 +1,4 @@
+import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute, Link, Navigate, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -67,7 +68,7 @@ function Layout() {
     );
 
   const current = NAV.find((n) => loc.pathname.startsWith(n.to));
-  const title = loc.pathname.startsWith("/interview-summary") ? "Interview Summary" : (current?.label ?? "Aria HR");
+  const title = loc.pathname.startsWith("/interview-summary") ? "Interview Summary" : (current?.label ?? "WAE HR");
   const name = (user.user_metadata?.["full_name"] as string) || user.email || "";
 
   return (
@@ -80,8 +81,8 @@ function Layout() {
       >
         <div className="flex h-14 items-center justify-between px-4">
           <Link to="/dashboard" className="flex items-center gap-2 text-sidebar-accent-foreground">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">A</div>
-            <span className="font-semibold">Aria HR</span>
+            <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
+            <span className="font-semibold">WAE HR</span>
           </Link>
           <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-4 w-4" /></button>
         </div>

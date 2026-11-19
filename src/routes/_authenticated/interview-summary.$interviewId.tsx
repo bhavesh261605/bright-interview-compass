@@ -10,7 +10,7 @@ import { Empty, Loading, PageHeader, StatusPill } from "@/components/app/ui-bits
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/interview-summary/$interviewId")({
-  head: () => ({ meta: [{ title: "Interview summary — Aria HR" }, { name: "description", content: "Interview transcript, notes and scorecard." }] }),
+  head: () => ({ meta: [{ title: "Interview summary — WAE HR" }, { name: "description", content: "Interview transcript, notes and scorecard." }] }),
   component: Summary,
 });
 

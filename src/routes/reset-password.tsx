@@ -10,10 +10,10 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Set a new password — Aria HR" },
-      { name: "description", content: "Choose a new password for your Aria HR account." },
-      { property: "og:title", content: "Set a new password — Aria HR" },
-      { property: "og:description", content: "Choose a new password for your Aria HR account." },
+      { title: "Set a new password — WAE HR" },
+      { name: "description", content: "Choose a new password for your WAE HR account." },
+      { property: "og:title", content: "Set a new password — WAE HR" },
+      { property: "og:description", content: "Choose a new password for your WAE HR account." },
     ],
   }),
   component: Reset,
