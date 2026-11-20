@@ -1,16 +1,31 @@
 export const SECTIONS = [
   { key: "introduction", label: "Introduction & background" },
   { key: "background", label: "Education / professional background" },
+  { key: "availability", label: "Notice period & availability" },
   { key: "motivation", label: "Motivation & career goals" },
-  { key: "projects", label: "Projects & work experience" },
   { key: "collaboration", label: "Communication & collaboration" },
   { key: "competency", label: "Job competency & work approach" },
-  { key: "availability", label: "Notice period & availability" },
+  { key: "projects", label: "Projects & work experience" },
   { key: "salary", label: "Salary expectations" },
   { key: "closing", label: "Closing questions" },
 ] as const;
 
 export type SectionKey = (typeof SECTIONS)[number]["key"];
+
+/** Never skip a required stage; allow up to two follow-ups after its first answer. */
+export function getTurnPolicy(currentSection: string, answersInSection: number) {
+  const index = Math.max(0, SECTIONS.findIndex((s) => s.key === currentSection));
+  const current = SECTIONS[index]?.key ?? "introduction";
+  const next = SECTIONS[index + 1]?.key;
+  const allowedSections: SectionKey[] = answersInSection >= 3 && next
+    ? [next]
+    : answersInSection > 0 && next ? [current, next] : [current];
+  return { allowedSections, canComplete: current === "closing" && answersInSection > 0 };
+}
+
+export function isOrderedTurn(policy: ReturnType<typeof getTurnPolicy>, turn: { section: string; interview_complete: boolean }) {
+  return policy.allowedSections.some((s) => s === turn.section) && (!turn.interview_complete || policy.canComplete);
+}
 
 export const FOCUS = {
   fresher: [
@@ -28,7 +43,7 @@ export const FOCUS = {
  * motivation, culture fit, STAR project questions, salary expectations. */
 export const QUESTION_SETS: Record<"fresher" | "experienced", Record<SectionKey, string[]>> = {
   fresher: {
-    introduction: ["Could you introduce yourself and tell me what drew you to this role?"],
+    introduction: ["Could you introduce yourself with a brief overview of your studies or training?"],
     background: ["Which subjects or coursework from your degree are most relevant to this role?", "Tell me about any internship or training you completed."],
     motivation: ["Why do you want to start your career in this field?", "Where would you like to be in two to three years?"],
     projects: ["Describe an academic or internship project: what was the situation, your task, the actions you personally took, and the result?"],
@@ -39,7 +54,7 @@ export const QUESTION_SETS: Record<"fresher" | "experienced", Record<SectionKey,
     closing: ["What questions do you have about the role or the team?"],
   },
   experienced: {
-    introduction: ["Could you walk me through your career so far and why you're exploring this role?"],
+    introduction: ["Could you give me a brief overview of your career so far?"],
     background: ["What are your current responsibilities and the scope of your role?", "Which achievement in your current job are you most proud of?"],
     motivation: ["What is prompting you to look for a change now?", "How does this role fit your career progression?"],
     projects: ["Describe a project you owned: the situation, your task, the actions you took and the measurable result (STAR)."],
@@ -67,6 +82,7 @@ export function buildSystemPrompt(p: {
   currentSection: string;
   state: InterviewState;
   profile: string;
+  turnPolicy?: ReturnType<typeof getTurnPolicy>;
 }) {
   const focus = FOCUS[p.category].map((f) => `- ${f}`).join("\n");
   const sections = SECTIONS.map((s, i) => `${i + 1}. ${s.key} — ${s.label}`).join("\n");
@@ -83,8 +99,13 @@ ${p.profile}
 FOCUS AREAS FOR THIS CATEGORY:
 ${focus}
 
-SECTIONS (adapt order to experience level):
+SECTIONS (mandatory order for both experience categories; never skip or reorder):
 ${sections}
+
+Complete background, then verify notice period and availability, then assess motivation, communication and job-related culture fit, then probe STAR projects, then ask salary expectations, then close. Structured HR notes and an advisory recommendation are written after submission, never shown to the candidate.
+This turn's permitted sections: ${(p.turnPolicy ?? getTurnPolicy(p.currentSection, 0)).allowedSections.join(", ")}.
+Completion permitted this turn: ${(p.turnPolicy ?? getTurnPolicy(p.currentSection, 0)).canComplete}.
+Stay in the current permitted section for a useful follow-up, or move only to the next permitted section if the answer is sufficient. If only the next section is permitted, transition now. The actual question must match the section you return; do not disguise a later-stage question under an earlier section label. If the candidate volunteers later-stage details, remember them but verify them only when that stage arrives.
 
 QUESTION BANK FOR THIS CATEGORY (base your questions on these; rephrase and follow up naturally):
 ${SECTIONS.map((s) => `${s.key}: ${QUESTION_SETS[p.category][s.key].join(" | ")}`).join("\n")}
@@ -94,7 +115,7 @@ INTERVIEW STATE:
 - Questions asked so far: ${p.state.questions_asked}
 - Topics covered: ${p.state.topics_covered.join(", ") || "none yet"}
 - Unresolved follow-up areas: ${p.state.unresolved_followups.join("; ") || "none"}
-- Time used: ${p.elapsedMinutes} of ${p.durationMinutes} minutes. Pace sections so all are covered; when time is nearly up, move to availability, salary and closing.
+- Time used: ${p.elapsedMinutes} of ${p.durationMinutes} minutes. When time is nearly up, shorten follow-ups but still cover each remaining section in order.
 
 BEHAVIOUR:
 - First turn: greet the candidate by first name, introduce yourself in one line, set expectations (about ${p.durationMinutes} minutes, a relaxed conversation, no right or wrong answers), then ask an easy opening question.
@@ -120,7 +141,7 @@ SALARY: Ask expectations professionally. Never promise, approve, negotiate or co
 
 You never make hiring decisions and never tell the candidate an outcome.
 
-When all sections are reasonably covered (or time is up), close warmly and personally (mention something specific you enjoyed hearing about), explain the recruiter will be in touch, and set interview_complete to true.
+Only when completion is permitted, close warmly and personally (mention something specific you enjoyed hearing about), explain the recruiter will be in touch, and set interview_complete to true. Otherwise it must be false, even if time is up.
 
 Respond ONLY with JSON of this shape:
 {"message": string, "section": one of [${SECTIONS.map((s) => `"${s.key}"`).join(", ")}], "topics_covered": string[], "unresolved_followups": string[], "interview_complete": boolean}
@@ -142,7 +163,7 @@ export function fallbackQuestion(section: string, category: "fresher" | "experie
     salary: "What are your salary expectations for this role?",
     closing: "Is there anything you'd like to ask about the role or the next steps?",
   };
-  return map[section] ?? map["introduction"]!;
+  return map[section] ?? "Could you give me a brief overview of your background?";
 }
 
 export const EVALUATION_COMPETENCIES = [

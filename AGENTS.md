@@ -35,3 +35,4 @@ use the editor.
 - Roles live in `public.user_roles`; data access is enforced by RLS via `can_access_candidate`/`has_role`, not just hidden buttons.
 - Candidates join via `/interview/$token` (interviews.invite_token) with no account; token-based server functions use the admin client and return only candidate-safe fields — HR data must never be added to those responses.
 - Demo entry (`/`) offers one-click HR demo sign-in and demo presets via public server functions in `interview.functions.ts`; remove or gate them before a real production launch.
+- Interview stage transitions are validated with the pure turn policy in `interview-prompts.ts` before messages are saved — prevents Gemini from skipping the required HR sequence or closing prematurely.

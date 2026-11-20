@@ -18,6 +18,8 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Sign in to the WAE HR interviewer workspace." },
       { property: "og:title", content: "Sign in — WAE HR" },
       { property: "og:description", content: "Sign in to the WAE HR interviewer workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Login,

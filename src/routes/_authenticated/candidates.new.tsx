@@ -4,7 +4,7 @@ import { CandidateForm } from "@/components/app/candidate-form";
 import { PageHeader } from "@/components/app/ui-bits";
 
 export const Route = createFileRoute("/_authenticated/candidates/new")({
-  head: () => ({ meta: [{ title: "Add candidate — WAE HR" }, { name: "description", content: "Add a new candidate." }] }),
+  head: () => ({ meta: [{ title: "Add candidate — WAE HR" }, { name: "description", content: "Add a new candidate." }, { property: "og:title", content: "Add candidate — WAE HR" }, { property: "og:description", content: "Add a new candidate." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: NewCandidate,
 });
 

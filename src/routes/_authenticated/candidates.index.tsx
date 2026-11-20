@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export const Route = createFileRoute("/_authenticated/candidates/")({
   validateSearch: z.object({ q: z.string().optional() }),
-  head: () => ({ meta: [{ title: "Candidates — WAE HR" }, { name: "description", content: "Manage HR interview candidates." }] }),
+  head: () => ({ meta: [{ title: "Candidates — WAE HR" }, { name: "description", content: "Manage HR interview candidates." }, { property: "og:title", content: "Candidates — WAE HR" }, { property: "og:description", content: "Manage HR interview candidates." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Candidates,
 });
 

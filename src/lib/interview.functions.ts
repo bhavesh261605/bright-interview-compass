@@ -5,6 +5,8 @@ import {
   buildEvaluationPrompt,
   buildSystemPrompt,
   fallbackQuestion,
+  getTurnPolicy,
+  isOrderedTurn,
   SECTIONS,
   type InterviewState,
 } from "./interview-prompts";
@@ -124,6 +126,7 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
         message: string;
         sequence_number: number;
         client_message_id: string | null;
+        section: string;
       }[];
     let msgs = await loadMsgs();
 
@@ -154,6 +157,8 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
       questions_asked: iv.state?.questions_asked ?? 0,
     };
     const elapsed = Math.round((Date.now() - new Date(iv.started_at).getTime()) / 60000);
+    const answersInSection = msgs.filter((m) => m.sender_type === "candidate" && m.section === iv.current_section).length;
+    const turnPolicy = getTurnPolicy(iv.current_section, answersInSection);
     const system = buildSystemPrompt({
       category: iv.experience_category,
       candidateName: iv.candidates?.full_name ?? "Candidate",
@@ -164,6 +169,7 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
       currentSection: iv.current_section,
       state,
       profile: profileText(iv.candidates),
+      turnPolicy,
     });
     const convo = msgs.map((m) => ({
       role: (m.sender_type === "ai" ? "assistant" : "user") as "assistant" | "user",
@@ -189,6 +195,7 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
         }
         const parsed = TurnSchema.safeParse(raw);
         if (!parsed.success) continue;
+        if (!isOrderedTurn(turnPolicy, parsed.data)) continue;
         const hit = findProhibitedTopic(parsed.data.message);
         if (hit) {
           flagged = hit;
@@ -206,8 +213,8 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
     if (!turn) {
       if (flagged) {
         turn = {
-          message: fallbackQuestion(iv.current_section, iv.experience_category),
-          section: iv.current_section,
+          message: fallbackQuestion(turnPolicy.allowedSections[0] ?? iv.current_section, iv.experience_category),
+          section: turnPolicy.allowedSections[0] ?? iv.current_section,
           topics_covered: [],
           unresolved_followups: state.unresolved_followups,
           interview_complete: false,

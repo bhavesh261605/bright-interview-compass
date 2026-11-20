@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/salary-bands")({
-  head: () => ({ meta: [{ title: "Salary bands — WAE HR" }, { name: "description", content: "Approved salary bands by job role." }] }),
+  head: () => ({ meta: [{ title: "Salary bands — WAE HR" }, { name: "description", content: "Approved salary bands by job role." }, { property: "og:title", content: "Salary bands — WAE HR" }, { property: "og:description", content: "Approved salary bands by job role." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: SalaryBands,
 });
 

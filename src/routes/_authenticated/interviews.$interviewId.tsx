@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { CandidateLink } from "@/components/app/candidate-link";
 
 export const Route = createFileRoute("/_authenticated/interviews/$interviewId")({
-  head: () => ({ meta: [{ title: "Live interview — WAE HR" }, { name: "description", content: "AI-led HR interview room." }] }),
+  head: () => ({ meta: [{ title: "Live interview — WAE HR" }, { name: "description", content: "AI-led HR interview room." }, { property: "og:title", content: "Live interview — WAE HR" }, { property: "og:description", content: "AI-led HR interview room." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: LiveInterview,
 });
 
