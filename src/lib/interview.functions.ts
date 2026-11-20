@@ -674,7 +674,7 @@ export const parseResume = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { readResumeWithAI, AIError } = await import("./ai.server");
     try {
-      const r = (await readResumeWithAI(data.base64, data.mimeType)) as Record<string, unknown>;
+      const r = (await readResumeWithAI(data.base64, data.mimeType)) as Partial<Record<"full_name"|"email"|"phone"|"current_company"|"current_location"|"years_of_experience"|"skills"|"summary", unknown>>;
       const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
       const yrs = Number(r.years_of_experience);
       return {
