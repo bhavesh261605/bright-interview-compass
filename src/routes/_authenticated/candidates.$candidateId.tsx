@@ -1,3 +1,4 @@
+import { CandidateLink } from "@/components/app/candidate-link";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -65,6 +66,7 @@ function CandidateDetail() {
         actions={
           <>
             <Button variant="outline" onClick={() => setEditing(true)}><Pencil className="mr-1 h-4 w-4" />Edit</Button>
+            {active && <CandidateLink token={active.invite_token} compact />}
             {active ? (
               <Button asChild><Link to="/interviews/$interviewId" params={{ interviewId: active.id }}><PlayCircle className="mr-1 h-4 w-4" />Resume interview</Link></Button>
             ) : (

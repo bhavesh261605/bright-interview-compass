@@ -2,7 +2,7 @@ import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Bot, CheckCircle2, Mic, MicOff, RefreshCw, Send, ShieldCheck, User } from "lucide-react";
+import { Bot, CheckCircle2, Mic, MicOff, RefreshCw, Volume2, VolumeX, Send, ShieldCheck, User } from "lucide-react";
 import { candidateFinish, candidateTurn, getCandidateSession } from "@/lib/interview.functions";
 import { SECTIONS } from "@/lib/interview-prompts";
 import { newClientId } from "@/lib/queries";
@@ -42,6 +42,8 @@ function CandidateRoom() {
   const [pending, setPending] = useState<{ id: string; message: string } | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const spokenRef = useRef<string | null>(null);
   const recRef = useRef<SpeechRec>(null);
   const started = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -71,9 +73,27 @@ function CandidateRoom() {
   }, [confirmed, s.data]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [s.data, pending, thinking]);
 
+  // Aria reads each new question aloud (browser voice) for a true voice-room experience.
+  const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+  useEffect(() => {
+    if (!ttsSupported || !confirmed) return;
+    const last = s.data?.messages.at(-1);
+    if (!last || last.sender_type !== "ai" || spokenRef.current === last.id) return;
+    const first = spokenRef.current === null && s.data!.messages.length > 1;
+    spokenRef.current = last.id;
+    if (!voiceOn || first) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(last.message);
+    u.lang = "en-IN";
+    u.rate = 1;
+    window.speechSynthesis.speak(u);
+  }, [s.data, confirmed, voiceOn, ttsSupported]);
+  useEffect(() => () => { if (ttsSupported) window.speechSynthesis.cancel(); }, [ttsSupported]);
+
   const speechSupported = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
   const toggleMic = () => {
     if (listening) { recRef.current?.stop(); return; }
+    if (ttsSupported) window.speechSynthesis.cancel();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const W = window as any;
     const Rec = W.SpeechRecognition ?? W.webkitSpeechRecognition;
@@ -118,7 +138,7 @@ function CandidateRoom() {
           <div className="eyebrow">Interview invitation</div>
           <h1 className="mt-1 text-xl font-semibold">Hi {d.candidateName.split(" ")[0]}, welcome.</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            This is a text HR interview for <b className="text-foreground">{d.roleTitle}</b>, about {d.durationMinutes} minutes. Aria, an AI interviewer, will ask one question at a time. You can type or use the microphone.
+            This is a text HR interview for <b className="text-foreground">{d.roleTitle}</b>, about {d.durationMinutes} minutes. Aria, an AI interviewer, will ask one question at a time and read it aloud. You can type or answer with the microphone.
           </p>
           <ul className="mt-4 space-y-1.5 text-xs text-muted-foreground">
             <li>• Every answer is saved instantly — you can close and resume with this link.</li>
@@ -158,6 +178,12 @@ function CandidateRoom() {
       <div className="mb-3 flex items-center gap-3 text-xs text-muted-foreground">
         <span className="whitespace-nowrap">{SECTIONS[idx]?.label}</span>
         <Progress value={((idx + 1) / SECTIONS.length) * 100} className="h-1.5" />
+        {ttsSupported && (
+          <button type="button" className="flex items-center gap-1 whitespace-nowrap hover:text-foreground" aria-label={voiceOn ? "Mute Aria's voice" : "Hear Aria's voice"}
+            onClick={() => { if (voiceOn) window.speechSynthesis.cancel(); setVoiceOn(!voiceOn); }}>
+            {voiceOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}{voiceOn ? "Voice on" : "Voice off"}
+          </button>
+        )}
         <span className="flex items-center gap-1 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />Saved</span>
       </div>
       <div className="surface flex min-h-0 flex-1 flex-col">

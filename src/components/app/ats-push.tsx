@@ -17,7 +17,7 @@ export function AtsPush({ scorecardId }: { scorecardId: string }) {
         supabase.from("interview_messages").select("sender_type, message, sequence_number, created_at").eq("interview_id", sc.interview_id).order("sequence_number"),
       ]);
       if (evError || msgsError) throw new Error("The full evaluation and transcript could not be loaded. Export cancelled.");
-      const payload = { schema: "aria-hr.ats.v1", exported_at: new Date().toISOString(), candidate: sc.candidates, scorecard: sc, evaluation: ev, transcript: msgs ?? [] };
+      const payload = { schema: "wae-hr.ats.v1", exported_at: new Date().toISOString(), candidate: sc.candidates, scorecard: sc, evaluation: ev, transcript: msgs ?? [] };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       const url = URL.createObjectURL(blob);
