@@ -121,7 +121,15 @@ function CandidateRoom() {
       <header className="flex h-14 items-center gap-3 border-b bg-card px-4">
         <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
         <span className="font-semibold">WAE HR · Interview</span>
-        <div className="ml-auto"><ViewSwitcher /></div>
+        <div className="ml-auto flex items-center gap-2">
+          {ttsSupported && (
+            <Button type="button" size="sm" variant={voiceOn ? "default" : "outline"} aria-label={voiceOn ? "Turn Aria's voice off" : "Turn Aria's voice on"}
+              onClick={() => { if (voiceOn) window.speechSynthesis.cancel(); setVoiceOn(!voiceOn); }}>
+              {voiceOn ? <Volume2 className="mr-1 h-4 w-4" /> : <VolumeX className="mr-1 h-4 w-4" />}{voiceOn ? "Voice on" : "Voice off"}
+            </Button>
+          )}
+          <ViewSwitcher />
+        </div>
       </header>
       {body}
     </div>
@@ -178,12 +186,6 @@ function CandidateRoom() {
       <div className="mb-3 flex items-center gap-3 text-xs text-muted-foreground">
         <span className="whitespace-nowrap">{SECTIONS[idx]?.label}</span>
         <Progress value={((idx + 1) / SECTIONS.length) * 100} className="h-1.5" />
-        {ttsSupported && (
-          <button type="button" className="flex items-center gap-1 whitespace-nowrap hover:text-foreground" aria-label={voiceOn ? "Mute Aria's voice" : "Hear Aria's voice"}
-            onClick={() => { if (voiceOn) window.speechSynthesis.cancel(); setVoiceOn(!voiceOn); }}>
-            {voiceOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}{voiceOn ? "Voice on" : "Voice off"}
-          </button>
-        )}
         <span className="flex items-center gap-1 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />Saved</span>
       </div>
       <div className="surface flex min-h-0 flex-1 flex-col">

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchJobRoles } from "@/lib/queries";
-import { validateSalary } from "@/lib/interview.functions";
+import { validateSalary, parseResume } from "@/lib/interview.functions";
 import { SALARY_ALIGNMENT, formatMoney } from "@/lib/labels";
 import { StatusPill } from "./ui-bits";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,29 @@ export function CandidateForm({ initial, onSaved }: { initial?: Candidate; onSav
   });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const readResume = async () => {
+    if (!file) return;
+    if (!["application/pdf", "image/png", "image/jpeg"].includes(file.type)) { toast.error("Resume reading works with PDF, PNG or JPG files."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Resume must be under 10 MB."); return; }
+    setReading(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+      const r = await parseResume({ data: { base64: btoa(bin), mimeType: file.type } });
+      if (!r.ok) { toast.error(r.error); return; }
+      setF((p) => ({
+        ...p,
+        full_name: r.full_name || p.full_name, email: r.email || p.email, phone: r.phone || p.phone,
+        current_company: r.current_company || p.current_company, current_location: r.current_location || p.current_location,
+        experience_level: r.years_of_experience > 0 ? "experienced" : p.experience_level,
+        years_of_experience: r.years_of_experience > 0 ? String(r.years_of_experience) : p.years_of_experience,
+        skills: r.skills.length ? r.skills.join(", ") : p.skills,
+        recruiter_notes: r.summary ? (p.recruiter_notes ? p.recruiter_notes + "\n\n" : "") + "Resume summary: " + r.summary : p.recruiter_notes,
+      }));
+      toast.success("Resume read — please check the filled details.");
+    } catch { toast.error("Could not read the resume."); } finally { setReading(false); }
+  };
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
 
   const salaryCheck = useQuery({
@@ -126,7 +149,10 @@ export function CandidateForm({ initial, onSaved }: { initial?: Candidate; onSav
         <F label="Current location"><Input value={f.current_location} onChange={(e) => set("current_location")(e.target.value)} /></F>
         <F label="Skills (comma separated)" wide><Input value={f.skills} onChange={(e) => set("skills")(e.target.value)} /></F>
         <F label="Resume (PDF/DOC, private)" wide>
-          <Input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <div className="flex gap-2">
+            <Input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <Button type="button" variant="outline" disabled={!file || reading} onClick={() => void readResume()}>{reading ? "Reading…" : "Read resume & autofill"}</Button>
+          </div>
           {initial?.resume_path && !file && <p className="mt-1 text-xs text-muted-foreground">A resume is on file. Uploading replaces it.</p>}
         </F>
         <F label="Recruiter notes" wide><Textarea rows={3} value={f.recruiter_notes} onChange={(e) => set("recruiter_notes")(e.target.value)} /></F>

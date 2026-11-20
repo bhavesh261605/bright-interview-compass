@@ -57,3 +57,27 @@ export async function callAIJson(messages: ChatMsg[], model: string): Promise<un
     throw new AIError(502, "invalid_json");
   }
 }
+
+/** Reads a resume file (PDF/image) with Gemini's native API and returns parsed JSON. */
+export async function readResumeWithAI(base64: string, mimeType: string): Promise<unknown> {
+  const key = process.env['GEMINI_API_KEY'];
+  if (!key) throw new AIError(500, "GEMINI_API_KEY is not configured for this app.");
+  const model = process.env['GEMINI_MODEL'] || "gemini-3-flash-preview";
+  const prompt = `Extract candidate details from this resume. Return ONLY JSON:
+{"full_name":string,"email":string,"phone":string,"current_company":string,"current_location":string,"years_of_experience":number,"skills":string[],"summary":string}
+Use "" or 0 when unknown. summary = 2-3 sentence professional summary (education, roles, key projects).
+Never include age, date of birth, religion, marital or family status.`;
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      contents: [{ parts: [{ inline_data: { mime_type: mimeType, data: base64 } }, { text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" },
+    }),
+  });
+  if (res.status === 429) throw new AIError(429, "The AI is busy right now. Please retry in a minute.");
+  if (!res.ok) throw new AIError(res.status, "Could not read the resume. Please fill the form manually.");
+  const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
+  try { return JSON.parse(stripFences(text)); } catch { throw new AIError(502, "Could not read the resume."); }
+}

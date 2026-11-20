@@ -666,3 +666,26 @@ export const createFreshDemoSession = createServerFn({ method: "POST" })
     if (e2 || !iv) throw new Error("Could not create demo interview: " + (e2?.message ?? ""));
     return { token: (iv as { invite_token: string }).invite_token };
   });
+
+export const parseResume = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { base64: string; mimeType: string }) =>
+    z.object({ base64: z.string().min(10).max(14_000_000), mimeType: z.enum(["application/pdf", "image/png", "image/jpeg"]) }).parse(d))
+  .handler(async ({ data }) => {
+    const { readResumeWithAI, AIError } = await import("./ai.server");
+    try {
+      const r = (await readResumeWithAI(data.base64, data.mimeType)) as Record<string, unknown>;
+      const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+      const yrs = Number(r.years_of_experience);
+      return {
+        ok: true as const,
+        full_name: str(r.full_name), email: str(r.email), phone: str(r.phone),
+        current_company: str(r.current_company), current_location: str(r.current_location),
+        years_of_experience: Number.isFinite(yrs) ? Math.max(0, Math.min(6, yrs)) : 0,
+        skills: Array.isArray(r.skills) ? r.skills.map(str).filter(Boolean).slice(0, 30) : [],
+        summary: str(r.summary),
+      };
+    } catch (e) {
+      return { ok: false as const, error: e instanceof AIError ? e.message : "Could not read the resume." };
+    }
+  });
