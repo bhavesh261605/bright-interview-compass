@@ -38,3 +38,4 @@ use the editor.
 - Interview stage transitions are validated with the pure turn policy in `interview-prompts.ts` before messages are saved — prevents Gemini from skipping the required HR sequence or closing prematurely.
 - Browser clients may only read interview messages, evaluations and review fields; those rows are written by server functions with the admin client after an access check (RLS/column grants enforce it) — keeps AI output and approvals tamper-proof.
 - Public demo helpers only list `candidates.is_demo` rows and obey the `demo_enabled` app setting — real invite links must never be exposed publicly.
+- The candidate video room (`src/components/app/video-room.tsx`) uses browser camera, speech synthesis and speech recognition only; video is never uploaded and answers go through the same `candidateTurn` path — keeps HR rules and privacy identical to text chat.

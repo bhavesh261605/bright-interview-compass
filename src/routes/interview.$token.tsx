@@ -2,11 +2,12 @@ import waeLogo from "@/assets/wae_logo.png.asset.json";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Bot, CheckCircle2, Mic, MicOff, RefreshCw, Volume2, VolumeX, Send, ShieldCheck, User } from "lucide-react";
+import { Bot, CheckCircle2, MessageSquare, Video, Mic, MicOff, RefreshCw, Volume2, VolumeX, Send, ShieldCheck, User } from "lucide-react";
 import { candidateFinish, candidateTurn, getCandidateSession } from "@/lib/interview.functions";
 import { SECTIONS } from "@/lib/interview-prompts";
 import { newClientId } from "@/lib/queries";
 import { ViewSwitcher } from "@/components/app/view-switcher";
+import { VideoRoom } from "@/components/app/video-room";
 import { Loading } from "@/components/app/ui-bits";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +37,7 @@ function CandidateRoom() {
   const { token } = Route.useParams();
   const qc = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
+  const [mode, setMode] = useState<"chat" | "video">("chat");
   const [text, setText] = useState("");
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ function CandidateRoom() {
   // Aria reads each new question aloud (browser voice) for a true voice-room experience.
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
   useEffect(() => {
-    if (!ttsSupported || !confirmed) return;
+    if (!ttsSupported || !confirmed || mode === "video") return;
     const last = s.data?.messages.at(-1);
     if (!last || last.sender_type !== "ai" || spokenRef.current === last.id) return;
     const first = spokenRef.current === null && s.data!.messages.length > 1;
@@ -89,7 +91,7 @@ function CandidateRoom() {
     u.lang = "en-IN";
     u.rate = 1;
     window.speechSynthesis.speak(u);
-  }, [s.data, confirmed, voiceOn, ttsSupported]);
+  }, [s.data, confirmed, voiceOn, ttsSupported, mode]);
   useEffect(() => () => { if (ttsSupported) window.speechSynthesis.cancel(); }, [ttsSupported]);
 
   const speechSupported = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
@@ -143,7 +145,7 @@ function CandidateRoom() {
         <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
         <span className="font-semibold">WAE HR · Interview</span>
         <div className="ml-auto flex items-center gap-2">
-          {ttsSupported && (
+          {ttsSupported && mode === "chat" && (
             <Button type="button" size="sm" variant={voiceOn ? "default" : "outline"} aria-label={voiceOn ? "Turn Aria's voice off" : "Turn Aria's voice on"}
               onClick={() => { if (voiceOn) window.speechSynthesis.cancel(); setVoiceOn(!voiceOn); }}>
               {voiceOn ? <Volume2 className="mr-1 h-4 w-4" /> : <VolumeX className="mr-1 h-4 w-4" />}{voiceOn ? "Voice on" : "Voice off"}
@@ -167,14 +169,28 @@ function CandidateRoom() {
           <div className="eyebrow">Interview invitation</div>
           <h1 className="mt-1 text-xl font-semibold">Hi {d.candidateName.split(" ")[0]}, welcome.</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            This is a text HR interview for <b className="text-foreground">{d.roleTitle}</b>, about {d.durationMinutes} minutes. Aria, an AI interviewer, will ask one question at a time and read it aloud. You can type or answer with the microphone.
+            This is an HR interview for <b className="text-foreground">{d.roleTitle}</b>, about {d.durationMinutes} minutes. Aria, an AI interviewer, will ask one question at a time and read it aloud. Pick a video &amp; voice room or a text chat below.
           </p>
           <ul className="mt-4 space-y-1.5 text-xs text-muted-foreground">
             <li>• Every answer is saved instantly — you can close and resume with this link.</li>
             <li>• You won't be asked about age, religion, marital or family status.</li>
             <li>• A human recruiter makes all decisions.</li>
           </ul>
-          <Button className="mt-5 w-full" onClick={() => setConfirmed(true)}>I'm {d.candidateName.split(" ")[0]} — start interview</Button>
+          <div className="eyebrow mt-5">I'm {d.candidateName.split(" ")[0]} — choose how to interview</div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={() => { setMode("video"); setConfirmed(true); }}
+              className="rounded-lg border-2 border-primary bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10">
+              <Video className="h-5 w-5 text-primary" />
+              <div className="mt-1 text-sm font-semibold">Video &amp; voice room</div>
+              <div className="text-xs text-muted-foreground">Camera on. Aria speaks, you answer out loud.</div>
+            </button>
+            <button type="button" onClick={() => { setMode("chat"); setConfirmed(true); }}
+              className="rounded-lg border p-3 text-left transition-colors hover:bg-muted">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              <div className="mt-1 text-sm font-semibold">Text chat</div>
+              <div className="text-xs text-muted-foreground">Type answers, with optional mic.</div>
+            </button>
+          </div>
         </div>
       </div>,
     );
@@ -210,6 +226,21 @@ function CandidateRoom() {
     setFinishing(false);
   };
   const unsent = !!pending && !thinking;
+
+  if (mode === "video")
+    return shell(
+      <VideoRoom
+        messages={d.messages}
+        thinking={thinking}
+        aiDone={d.aiDone}
+        error={error ?? (unsent ? "Your last answer wasn't sent." : awaitingAI ? "Aria hasn't replied yet." : finishError)}
+        finishing={finishing}
+        onSend={async (t) => { const cid = newClientId(); setPending({ id: cid, message: t }); await turn({ text: t, clientMessageId: cid }); }}
+        onRetry={() => void retry()}
+        onFinish={() => void finish()}
+        onSwitchToChat={() => { spokenRef.current = d.messages.at(-1)?.id ?? null; setMode("chat"); }}
+      />,
+    );
 
   return shell(
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-3 sm:p-4" style={{ height: "calc(100vh - 3.5rem)" }}>
