@@ -8,6 +8,7 @@ import { SECTIONS } from "@/lib/interview-prompts";
 import { newClientId } from "@/lib/queries";
 import { ViewSwitcher } from "@/components/app/view-switcher";
 import { VideoRoom } from "@/components/app/video-room";
+import { speakAria, stopAria } from "@/lib/aria-voice";
 import { Loading } from "@/components/app/ui-bits";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,7 +79,7 @@ function CandidateRoom() {
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [s.data, pending, thinking]);
 
   // Aria reads each new question aloud (browser voice) for a true voice-room experience.
-  const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const ttsSupported = typeof window !== "undefined";
   useEffect(() => {
     if (!ttsSupported || !confirmed || mode === "video") return;
     const last = s.data?.messages.at(-1);
@@ -86,18 +87,14 @@ function CandidateRoom() {
     const first = spokenRef.current === null && s.data!.messages.length > 1;
     spokenRef.current = last.id;
     if (!voiceOn || first) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(last.message);
-    u.lang = "en-IN";
-    u.rate = 1;
-    window.speechSynthesis.speak(u);
+    void speakAria(token, last.message);
   }, [s.data, confirmed, voiceOn, ttsSupported, mode]);
-  useEffect(() => () => { if (ttsSupported) window.speechSynthesis.cancel(); }, [ttsSupported]);
+  useEffect(() => () => stopAria(), []);
 
   const speechSupported = typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
   const toggleMic = () => {
     if (listening) { recRef.current?.stop(); return; }
-    if (ttsSupported) window.speechSynthesis.cancel();
+    stopAria();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const W = window as any;
     const Rec = W.SpeechRecognition ?? W.webkitSpeechRecognition;
@@ -147,7 +144,7 @@ function CandidateRoom() {
         <div className="ml-auto flex items-center gap-2">
           {ttsSupported && mode === "chat" && (
             <Button type="button" size="sm" variant={voiceOn ? "default" : "outline"} aria-label={voiceOn ? "Turn Aria's voice off" : "Turn Aria's voice on"}
-              onClick={() => { if (voiceOn) window.speechSynthesis.cancel(); setVoiceOn(!voiceOn); }}>
+              onClick={() => { if (voiceOn) stopAria(); setVoiceOn(!voiceOn); }}>
               {voiceOn ? <Volume2 className="mr-1 h-4 w-4" /> : <VolumeX className="mr-1 h-4 w-4" />}{voiceOn ? "Voice on" : "Voice off"}
             </Button>
           )}
@@ -230,6 +227,7 @@ function CandidateRoom() {
   if (mode === "video")
     return shell(
       <VideoRoom
+        token={token}
         messages={d.messages}
         thinking={thinking}
         aiDone={d.aiDone}

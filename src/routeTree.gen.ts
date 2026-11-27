@@ -28,6 +28,7 @@ import { Route as AuthenticatedInterviewsInterviewIdRouteImport } from './routes
 import { Route as AuthenticatedInterviewsNewRouteImport } from './routes/_authenticated/interviews.new'
 import { Route as AuthenticatedScorecardsIndexRouteImport } from './routes/_authenticated/scorecards.index'
 import { Route as AuthenticatedScorecardsScorecardIdRouteImport } from './routes/_authenticated/scorecards.$scorecardId'
+import { Route as ApiPublicAriaVoiceRouteImport } from './routes/api/public/aria-voice'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -134,6 +135,11 @@ const AuthenticatedScorecardsScorecardIdRoute =
     path: '/scorecards/$scorecardId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicAriaVoiceRoute = ApiPublicAriaVoiceRouteImport.update({
+  id: '/api/public/aria-voice',
+  path: '/api/public/aria-voice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
   '/interviews/new': typeof AuthenticatedInterviewsNewRoute
   '/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/api/public/aria-voice': typeof ApiPublicAriaVoiceRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/interviews/': typeof AuthenticatedInterviewsIndexRoute
   '/scorecards/': typeof AuthenticatedScorecardsIndexRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
   '/interviews/new': typeof AuthenticatedInterviewsNewRoute
   '/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/api/public/aria-voice': typeof ApiPublicAriaVoiceRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
   '/interviews': typeof AuthenticatedInterviewsIndexRoute
   '/scorecards': typeof AuthenticatedScorecardsIndexRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/_authenticated/interviews/$interviewId': typeof AuthenticatedInterviewsInterviewIdRoute
   '/_authenticated/interviews/new': typeof AuthenticatedInterviewsNewRoute
   '/_authenticated/scorecards/$scorecardId': typeof AuthenticatedScorecardsScorecardIdRoute
+  '/api/public/aria-voice': typeof ApiPublicAriaVoiceRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
   '/_authenticated/interviews/': typeof AuthenticatedInterviewsIndexRoute
   '/_authenticated/scorecards/': typeof AuthenticatedScorecardsIndexRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/interviews/$interviewId'
     | '/interviews/new'
     | '/scorecards/$scorecardId'
+    | '/api/public/aria-voice'
     | '/candidates/'
     | '/interviews/'
     | '/scorecards/'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/interviews/$interviewId'
     | '/interviews/new'
     | '/scorecards/$scorecardId'
+    | '/api/public/aria-voice'
     | '/candidates'
     | '/interviews'
     | '/scorecards'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated/interviews/$interviewId'
     | '/_authenticated/interviews/new'
     | '/_authenticated/scorecards/$scorecardId'
+    | '/api/public/aria-voice'
     | '/_authenticated/candidates/'
     | '/_authenticated/interviews/'
     | '/_authenticated/scorecards/'
@@ -267,6 +279,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   InterviewTokenRoute: typeof InterviewTokenRoute
+  ApiPublicAriaVoiceRoute: typeof ApiPublicAriaVoiceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -404,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedScorecardsScorecardIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/aria-voice': {
+      id: '/api/public/aria-voice'
+      path: '/api/public/aria-voice'
+      fullPath: '/api/public/aria-voice'
+      preLoaderRoute: typeof ApiPublicAriaVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -455,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   InterviewTokenRoute: InterviewTokenRoute,
+  ApiPublicAriaVoiceRoute: ApiPublicAriaVoiceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

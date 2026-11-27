@@ -3,6 +3,7 @@ import { Bot, Camera, CameraOff, CheckCircle2, Loader2, Mic, MessageSquare, Refr
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { speakAria, stopAria } from "@/lib/aria-voice";
 
 type Msg = { id: string; sender_type: string; message: string };
 type Phase = "speaking" | "listening" | "thinking" | "idle";
@@ -15,16 +16,8 @@ type SpeechRec = any;
  * question aloud, then the mic opens automatically and live captions show what was heard.
  * Answers go through the same onSend path as the text chat, so all HR rules still apply.
  */
-// Prefer a natural-sounding English voice (Google/Microsoft neural voices) when the browser has one.
-function pickVoice(): SpeechSynthesisVoice | undefined {
-  const all = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
-  return all.find((v) => v.lang === "en-IN" && /google|natural|neural/i.test(v.name))
-    ?? all.find((v) => /natural|neural/i.test(v.name))
-    ?? all.find((v) => /google/i.test(v.name))
-    ?? all.find((v) => v.lang === "en-IN");
-}
-
 export function VideoRoom(props: {
+  token: string;
   messages: Msg[];
   thinking: boolean;
   aiDone: boolean;
@@ -54,7 +47,7 @@ export function VideoRoom(props: {
 
   const W = typeof window !== "undefined" ? (window as unknown as Record<string, unknown>) : {};
   const Rec = (W["SpeechRecognition"] ?? W["webkitSpeechRecognition"]) as (new () => SpeechRec) | undefined;
-  const tts = typeof window !== "undefined" && "speechSynthesis" in window;
+  const tts = typeof window !== "undefined";
 
   // Camera
   useEffect(() => {
@@ -77,7 +70,7 @@ export function VideoRoom(props: {
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     try { recRef.current?.abort?.(); } catch { /* stopped */ }
-    if (tts) window.speechSynthesis.cancel();
+    stopAria();
   }, [tts]);
 
   const clearSilence = () => { if (silenceRef.current) { clearTimeout(silenceRef.current); silenceRef.current = null; } };
@@ -135,15 +128,7 @@ export function VideoRoom(props: {
   }, [messages, thinking, aiDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function speak(text: string, after: () => void) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-IN";
-    u.rate = 1.15;
-    const v = pickVoice();
-    if (v) u.voice = v;
-    u.onend = after;
-    u.onerror = after;
-    window.speechSynthesis.speak(u);
+    void speakAria(props.token, text, after);
   }
 
   const answer = (caption + " " + interim).trim();
@@ -246,7 +231,7 @@ export function VideoRoom(props: {
           </div>
         )}
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <button className="flex items-center gap-1 hover:text-foreground" onClick={() => { stopListening(); if (tts) window.speechSynthesis.cancel(); props.onSwitchToChat(); }}>
+          <button className="flex items-center gap-1 hover:text-foreground" onClick={() => { stopListening(); stopAria(); props.onSwitchToChat(); }}>
             <MessageSquare className="h-3.5 w-3.5" />Switch to text chat
           </button>
           {!aiDone && <button className="hover:text-foreground" disabled={props.finishing}
