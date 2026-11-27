@@ -32,6 +32,9 @@ export function VideoRoom(props: {
   const recRef = useRef<SpeechRec>(null);
   const spokenRef = useRef<string | null>(null);
   const finalRef = useRef("");
+  const silenceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitRef = useRef<() => void>(() => {});
+  const SILENCE_MS = 2200;
   const [camOn, setCamOn] = useState(true);
   const [camError, setCamError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -68,7 +71,8 @@ export function VideoRoom(props: {
     if (tts) window.speechSynthesis.cancel();
   }, [tts]);
 
-  const stopListening = () => { try { recRef.current?.stop(); } catch { /* stopped */ } };
+  const clearSilence = () => { if (silenceRef.current) { clearTimeout(silenceRef.current); silenceRef.current = null; } };
+  const stopListening = () => { clearSilence(); try { recRef.current?.stop(); } catch { /* stopped */ } };
 
   const startListening = () => {
     if (!Rec) { setEditing(true); setPhase("idle"); return; }
@@ -89,6 +93,9 @@ export function VideoRoom(props: {
       }
       setCaption(finalRef.current);
       setInterim(live);
+      // Candidate paused long enough: treat the answer as finished and send it.
+      clearSilence();
+      if ((finalRef.current + live).trim()) silenceRef.current = setTimeout(() => submitRef.current(), SILENCE_MS);
     };
     rec.onend = () => setPhase((p) => (p === "listening" ? "idle" : p));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,13 +136,15 @@ export function VideoRoom(props: {
 
   const answer = (caption + " " + interim).trim();
   const submit = async () => {
-    const t = answer;
+    const t = (finalRef.current + " " + (editing ? "" : interim)).trim() || answer;
     if (!t || thinking) return;
     stopListening();
     setPhase("thinking");
     setCaption(""); setInterim(""); setEditing(false);
+    finalRef.current = "";
     await onSend(t);
   };
+  submitRef.current = () => { if (!editing) void submit(); };
   const replay = () => {
     if (!lastAi || !tts) return;
     stopListening();
@@ -176,7 +185,7 @@ export function VideoRoom(props: {
           <div>
             <div className="font-semibold">Aria</div>
             <div className="text-xs text-muted-foreground" aria-live="polite">
-              {phase === "speaking" ? "Speaking…" : phase === "thinking" ? "Thinking…" : phase === "listening" ? "Your turn — speak your answer" : aiDone ? "Interview finished" : "Waiting"}
+              {phase === "speaking" ? "Speaking…" : phase === "thinking" ? "Thinking…" : phase === "listening" ? "Your turn — speak, then pause and Aria will reply" : aiDone ? "Interview finished" : "Waiting"}
             </div>
           </div>
           {phase === "thinking" && <Loader2 className="ml-auto h-5 w-5 animate-spin text-muted-foreground" />}
@@ -188,10 +197,10 @@ export function VideoRoom(props: {
           <div className="mt-4 rounded-lg border bg-muted/40 p-3">
             <div className="eyebrow mb-1">Your answer {phase === "listening" && "· live captions"}</div>
             {editing ? (
-              <Textarea rows={4} value={caption} onChange={(e) => { setCaption(e.target.value); setInterim(""); }} placeholder="Type or edit your answer" />
+              <Textarea rows={4} value={caption} onChange={(e) => { setCaption(e.target.value); finalRef.current = e.target.value; setInterim(""); }} placeholder="Type or edit your answer" />
             ) : (
               <p className="min-h-[4rem] text-sm">{caption}{interim && <span className="text-muted-foreground"> {interim}</span>}
-                {!answer && <span className="text-muted-foreground">{phase === "listening" ? "Start speaking — your words appear here." : "…"}</span>}</p>
+                {!answer && <span className="text-muted-foreground">{phase === "listening" ? "Start speaking — when you pause for a moment, your answer is sent." : "…"}</span>}</p>
             )}
           </div>
         )}
@@ -211,7 +220,7 @@ export function VideoRoom(props: {
           </div>
         ) : (
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={() => void submit()} disabled={!answer || thinking}><Send className="mr-1 h-4 w-4" />Done speaking</Button>
+            {editing && <Button onClick={() => void submit()} disabled={!answer || thinking}><Send className="mr-1 h-4 w-4" />Send answer</Button>}
             <Button variant="outline" onClick={startListening} disabled={thinking || phase === "speaking"}><Mic className="mr-1 h-4 w-4" />Answer again</Button>
             {tts && <Button variant="ghost" onClick={replay} disabled={thinking || !lastAi}>Repeat question</Button>}
             <Button variant="ghost" onClick={() => { stopListening(); setEditing(!editing); }}>{editing ? "Use voice" : "Edit / type"}</Button>
