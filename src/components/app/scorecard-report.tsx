@@ -88,6 +88,7 @@ export function ScorecardReport({ interviewId }: { interviewId: string }) {
             <Field label="Role" value={(iv.job_roles as { title: string } | null)?.title ?? "—"} />
             <Field label="Type" value={`${iv.interview_type} · ${iv.duration_minutes} min`} />
             <Field label="Date" value={formatDate(iv.started_at)} />
+            <Field label="Interview room" value={(iv.state as { interview_mode?: string } | null)?.interview_mode === "video" ? "Video & voice (camera on, spoken answers)" : "Text chat"} />
             <Field label="Messages" value={msgs.length} />
           </dl>
         </Section>

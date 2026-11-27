@@ -15,6 +15,15 @@ type SpeechRec = any;
  * question aloud, then the mic opens automatically and live captions show what was heard.
  * Answers go through the same onSend path as the text chat, so all HR rules still apply.
  */
+// Prefer a natural-sounding English voice (Google/Microsoft neural voices) when the browser has one.
+function pickVoice(): SpeechSynthesisVoice | undefined {
+  const all = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
+  return all.find((v) => v.lang === "en-IN" && /google|natural|neural/i.test(v.name))
+    ?? all.find((v) => /natural|neural/i.test(v.name))
+    ?? all.find((v) => /google/i.test(v.name))
+    ?? all.find((v) => v.lang === "en-IN");
+}
+
 export function VideoRoom(props: {
   messages: Msg[];
   thinking: boolean;
@@ -34,7 +43,7 @@ export function VideoRoom(props: {
   const finalRef = useRef("");
   const silenceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submitRef = useRef<() => void>(() => {});
-  const SILENCE_MS = 2200;
+  const SILENCE_MS = 1600;
   const [camOn, setCamOn] = useState(true);
   const [camError, setCamError] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -129,6 +138,9 @@ export function VideoRoom(props: {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "en-IN";
+    u.rate = 1.15;
+    const v = pickVoice();
+    if (v) u.voice = v;
     u.onend = after;
     u.onerror = after;
     window.speechSynthesis.speak(u);
@@ -144,7 +156,15 @@ export function VideoRoom(props: {
     finalRef.current = "";
     await onSend(t);
   };
-  submitRef.current = () => { if (!editing) void submit(); };
+  submitRef.current = () => {
+    if (editing) return;
+    const t = (finalRef.current + " " + interim).trim();
+    // Voice command: "repeat the question" replays Aria instead of sending an answer.
+    if (isRepeatRequest(t)) { finalRef.current = ""; setCaption(""); setInterim(""); replay(); return; }
+    void submit();
+  };
+  const isRepeatRequest = (t: string) =>
+    t.length < 60 && /\b(repeat|say (that|it) again|pardon|come again|didn'?t (hear|catch|get)|once more)\b/i.test(t);
   const replay = () => {
     if (!lastAi || !tts) return;
     stopListening();
@@ -200,7 +220,7 @@ export function VideoRoom(props: {
               <Textarea rows={4} value={caption} onChange={(e) => { setCaption(e.target.value); finalRef.current = e.target.value; setInterim(""); }} placeholder="Type or edit your answer" />
             ) : (
               <p className="min-h-[4rem] text-sm">{caption}{interim && <span className="text-muted-foreground"> {interim}</span>}
-                {!answer && <span className="text-muted-foreground">{phase === "listening" ? "Start speaking — when you pause for a moment, your answer is sent." : "…"}</span>}</p>
+                {!answer && <span className="text-muted-foreground">{phase === "listening" ? "Start speaking — pause when you\u2019re done. Say \u201crepeat the question\u201d to hear it again." : "…"}</span>}</p>
             )}
           </div>
         )}
@@ -222,7 +242,6 @@ export function VideoRoom(props: {
           <div className="mt-4 flex flex-wrap gap-2">
             {editing && <Button onClick={() => void submit()} disabled={!answer || thinking}><Send className="mr-1 h-4 w-4" />Send answer</Button>}
             <Button variant="outline" onClick={startListening} disabled={thinking || phase === "speaking"}><Mic className="mr-1 h-4 w-4" />Answer again</Button>
-            {tts && <Button variant="ghost" onClick={replay} disabled={thinking || !lastAi}>Repeat question</Button>}
             <Button variant="ghost" onClick={() => { stopListening(); setEditing(!editing); }}>{editing ? "Use voice" : "Edit / type"}</Button>
           </div>
         )}

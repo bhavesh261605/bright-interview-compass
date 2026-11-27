@@ -256,7 +256,7 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
     };
     const { error: stErr } = await w
       .from("interviews")
-      .update({ current_section: section, state: { ...newState, ai_marked_complete: t.interview_complete } })
+      .update({ current_section: section, state: { ...newState, ai_marked_complete: t.interview_complete, ...(iv.state?.interview_mode ? { interview_mode: iv.state.interview_mode } : {}) } })
       .eq("id", iv.id);
     if (stErr) return { ok: false as const, error: "Could not update the interview progress. Please retry." };
     return { ok: true as const, generated: true, complete: t.interview_complete };
@@ -635,11 +635,17 @@ export const getCandidateSession = createServerFn({ method: "POST" })
 
 export const candidateTurn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ token: z.string().uuid(), text: z.string().trim().min(1).max(4000).optional(), clientMessageId: z.string().min(6).max(80).optional() }).parse(d),
+    z.object({ token: z.string().uuid(), text: z.string().trim().min(1).max(4000).optional(), clientMessageId: z.string().min(6).max(80).optional(), mode: z.enum(["chat", "video"]).optional() }).parse(d),
   )
   .handler(async ({ data }) => {
     const { admin, iv } = await adminByToken(data.token);
     if (!iv) return { ok: false as const, error: "This interview link is invalid." };
+    if (data.mode) {
+      // Remember which room the candidate used so HR sees it on the scorecard.
+      const { data: cur } = await admin.from("interviews").select("state").eq("id", iv.id).single();
+      const st = (cur?.state ?? {}) as Record<string, unknown>;
+      if (st["interview_mode"] !== data.mode) await admin.from("interviews").update({ state: { ...st, interview_mode: data.mode } }).eq("id", iv.id);
+    }
     return turnHandler({ data: { interviewId: iv.id, text: data.text, clientMessageId: data.clientMessageId }, context: { supabase: admin, userId: null } });
   });
 

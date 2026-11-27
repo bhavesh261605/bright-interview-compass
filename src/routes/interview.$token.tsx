@@ -58,7 +58,7 @@ function CandidateRoom() {
     setThinking(true);
     setError(null);
     try {
-      const r = await candidateTurn({ data: { token, ...payload } });
+      const r = await candidateTurn({ data: { token, mode, ...payload } });
       if (!r.ok) setError(r.error);
       await qc.invalidateQueries({ queryKey: key });
       if (r.ok) setPending(null);
