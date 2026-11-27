@@ -31,7 +31,8 @@ export async function callAIJson(messages: ChatMsg[], model: string): Promise<un
   const res = await fetch(url, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: useModel, messages, response_format: { type: "json_object" } }),
+    body: JSON.stringify({ model: useModel, messages, response_format: { type: "json_object" }, max_tokens: 4096 }),
+    signal: AbortSignal.timeout(45_000),
   });
 
   if (!res.ok) {
@@ -74,6 +75,7 @@ Never include age, date of birth, religion, marital or family status.`;
       contents: [{ parts: [{ inline_data: { mime_type: mimeType, data: base64 } }, { text: prompt }] }],
       generationConfig: { responseMimeType: "application/json" },
     }),
+    signal: AbortSignal.timeout(60_000),
   });
   if (res.status === 429) throw new AIError(429, "The AI is busy right now. Please retry in a minute.");
   if (!res.ok) throw new AIError(res.status, "Could not read the resume. Please fill the form manually.");

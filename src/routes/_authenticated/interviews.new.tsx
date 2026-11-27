@@ -42,15 +42,21 @@ function Setup() {
     enabled: !!candidateId,
     queryFn: async () => (await supabase.from("candidates").select("*").eq("id", candidateId).maybeSingle()).data,
   });
+  // Context the user typed themselves is kept; context copied from a role description follows the role.
+  const [autoContext, setAutoContext] = useState("");
   useEffect(() => {
     if (cand.data) {
       setCategory(cand.data.experience_level as "fresher" | "experienced");
-      if (cand.data.job_role_id) setJobRoleId(cand.data.job_role_id);
+      setJobRoleId(cand.data.job_role_id ?? "");
     }
   }, [cand.data]);
   useEffect(() => {
     const r = roles.data?.find((x) => x.id === jobRoleId);
-    if (r?.description && !context) setContext(r.description);
+    const next = r?.description ?? "";
+    if (!context.trim() || context === autoContext) {
+      setContext(next);
+      setAutoContext(next);
+    }
   }, [jobRoleId, roles.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = async () => {

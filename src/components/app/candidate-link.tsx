@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 /** Opens / copies the unique no-login candidate interview link. */
 export function CandidateLink({ token, compact }: { token: string | null | undefined; compact?: boolean }) {
   if (!token) return null;
-  const copy = () => {
-    void navigator.clipboard.writeText(`${window.location.origin}/interview/${token}`);
-    toast.success("Candidate link copied");
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/interview/${token}`);
+      toast.success("Candidate link copied");
+    } catch {
+      toast.error("Couldn't copy automatically — open the interview and copy the address bar.");
+    }
   };
   return (
     <div className="flex gap-1.5">

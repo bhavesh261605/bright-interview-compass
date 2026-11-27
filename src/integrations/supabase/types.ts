@@ -76,6 +76,7 @@ export type Database = {
           experience_level: string
           full_name: string
           id: string
+          is_demo: boolean
           job_role_id: string | null
           notice_period_days: number | null
           phone: string | null
@@ -99,6 +100,7 @@ export type Database = {
           experience_level: string
           full_name: string
           id?: string
+          is_demo?: boolean
           job_role_id?: string | null
           notice_period_days?: number | null
           phone?: string | null
@@ -122,6 +124,7 @@ export type Database = {
           experience_level?: string
           full_name?: string
           id?: string
+          is_demo?: boolean
           job_role_id?: string | null
           notice_period_days?: number | null
           phone?: string | null
@@ -254,11 +257,13 @@ export type Database = {
           current_section: string
           duration_minutes: number
           experience_category: string
+          expires_at: string | null
           id: string
           interview_type: string
           interviewer_id: string
           invite_token: string
           job_role_id: string | null
+          revoked_at: string | null
           role_context: string | null
           started_at: string
           state: Json
@@ -271,11 +276,13 @@ export type Database = {
           current_section?: string
           duration_minutes?: number
           experience_category: string
+          expires_at?: string | null
           id?: string
           interview_type?: string
           interviewer_id?: string
           invite_token?: string
           job_role_id?: string | null
+          revoked_at?: string | null
           role_context?: string | null
           started_at?: string
           state?: Json
@@ -288,11 +295,13 @@ export type Database = {
           current_section?: string
           duration_minutes?: number
           experience_category?: string
+          expires_at?: string | null
           id?: string
           interview_type?: string
           interviewer_id?: string
           invite_token?: string
           job_role_id?: string | null
+          revoked_at?: string | null
           role_context?: string | null
           started_at?: string
           state?: Json
@@ -601,6 +610,7 @@ export type Database = {
     }
     Functions: {
       can_access_candidate: { Args: { _cid: string }; Returns: boolean }
+      can_access_resume: { Args: { _name: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

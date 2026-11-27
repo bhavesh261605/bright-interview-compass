@@ -33,7 +33,7 @@ const NAV = [
 ] as const;
 
 function Layout() {
-  const { user, roles, loading, signOut } = useAuth();
+  const { user, roles, displayName, loading, signOut } = useAuth();
   const loc = useLocation();
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
@@ -46,10 +46,16 @@ function Layout() {
       const { data } = await supabase
         .from("scorecards")
         .select("id, review_reasons, candidates(full_name)")
-        .eq("reviewer_status", "pending")
+        .eq("review_required", true)
+        .in("reviewer_status", ["pending", "info_requested", "returned"])
         .order("created_at", { ascending: false })
         .limit(8);
-      return data ?? [];
+      const { count } = await supabase
+        .from("scorecards")
+        .select("id", { count: "exact", head: true })
+        .eq("review_required", true)
+        .in("reviewer_status", ["pending", "info_requested", "returned"]);
+      return { items: data ?? [], count: count ?? (data ?? []).length };
     },
   });
 
@@ -61,7 +67,7 @@ function Layout() {
       <div className="flex min-h-screen items-center justify-center p-6 text-center">
         <div className="surface max-w-md p-6">
           <h1 className="font-semibold">Awaiting access</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Your account has no role yet. Ask an admin to grant you access.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Your account is waiting for approval. An admin can give you access from Settings → Team. Signed in as {user.email}.</p>
           <button className="mt-4 text-sm text-primary" onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
@@ -69,7 +75,7 @@ function Layout() {
 
   const current = NAV.find((n) => loc.pathname.startsWith(n.to));
   const title = loc.pathname.startsWith("/interview-summary") ? "Interview Summary" : (current?.label ?? "WAE HR");
-  const name = (user.user_metadata?.["full_name"] as string) || user.email || "";
+  const name = displayName || (user.user_metadata?.["full_name"] as string) || user.email || "";
 
   return (
     <div className="flex min-h-screen">
@@ -101,9 +107,9 @@ function Layout() {
               >
                 <n.icon className={cn("h-4 w-4", active && "text-sidebar-primary")} />
                 {n.label}
-                {n.to === "/review-queue" && (pending.data?.length ?? 0) > 0 && (
+                {n.to === "/review-queue" && (pending.data?.count ?? 0) > 0 && (
                   <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 text-[10px] font-semibold text-sidebar-primary-foreground">
-                    {pending.data?.length}
+                    {pending.data?.count}
                   </span>
                 )}
               </Link>
@@ -136,12 +142,12 @@ function Layout() {
           <Popover>
             <PopoverTrigger className="relative ml-auto rounded-md p-2 hover:bg-muted md:ml-0" aria-label="Notifications">
               <Bell className="h-4 w-4" />
-              {(pending.data?.length ?? 0) > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />}
+              {(pending.data?.count ?? 0) > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />}
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 p-0">
               <div className="border-b px-3 py-2 text-sm font-semibold">Awaiting human review</div>
-              {(pending.data ?? []).length === 0 && <p className="p-3 text-sm text-muted-foreground">Nothing pending.</p>}
-              {(pending.data ?? []).map((p) => (
+              {(pending.data?.items ?? []).length === 0 && <p className="p-3 text-sm text-muted-foreground">Nothing pending.</p>}
+              {(pending.data?.items ?? []).map((p) => (
                 <Link key={p.id} to="/scorecards/$scorecardId" params={{ scorecardId: p.id }} className="block border-b px-3 py-2 text-sm last:border-0 hover:bg-muted">
                   <div className="font-medium">{(p.candidates as { full_name: string } | null)?.full_name}</div>
                   <div className="text-xs text-muted-foreground">{p.review_reasons?.[0]}</div>

@@ -36,3 +36,5 @@ use the editor.
 - Candidates join via `/interview/$token` (interviews.invite_token) with no account; token-based server functions use the admin client and return only candidate-safe fields — HR data must never be added to those responses.
 - Demo entry (`/`) offers one-click HR demo sign-in and demo presets via public server functions in `interview.functions.ts`; remove or gate them before a real production launch.
 - Interview stage transitions are validated with the pure turn policy in `interview-prompts.ts` before messages are saved — prevents Gemini from skipping the required HR sequence or closing prematurely.
+- Browser clients may only read interview messages, evaluations and review fields; those rows are written by server functions with the admin client after an access check (RLS/column grants enforce it) — keeps AI output and approvals tamper-proof.
+- Public demo helpers only list `candidates.is_demo` rows and obey the `demo_enabled` app setting — real invite links must never be exposed publicly.

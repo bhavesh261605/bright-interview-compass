@@ -66,15 +66,12 @@ function ReviewQueue() {
                     <div>
                       <div className="eyebrow mb-1">Evidence</div>
                       {flags.map((f, i) => (
-                        <p key={i} className="text-xs"><b>Red flag — {f.flag}:</b> <i className="text-muted-foreground">“{f.evidence}”</i></p>
+                        <p key={i} className="text-xs"><b>Red flag — {f.flag}:</b> <i className="text-muted-foreground">“{f.evidence}”</i>{(f as { verified?: boolean }).verified === false && <span className="ml-1 rounded bg-warning/15 px-1 text-[10px] font-medium text-warning">quote not found in transcript</span>}</p>
                       ))}
                     </div>
                   )}
                 </div>
-                <details className="mt-3 rounded-md border p-3">
-                  <summary className="cursor-pointer text-sm font-medium">Full interview transcript</summary>
-                  <div className="mt-3"><Transcript interviewId={s.interview_id} /></div>
-                </details>
+                <LazyTranscript interviewId={s.interview_id} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   <AtsPush scorecardId={s.id} />
                   <Link to="/scorecards/$scorecardId" params={{ scorecardId: s.id }} className="inline-flex items-center rounded-md border px-3 text-sm hover:bg-muted">Open scorecard</Link>
@@ -86,5 +83,16 @@ function ReviewQueue() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Transcript loads only when a reviewer opens it, instead of one request per case up front. */
+function LazyTranscript({ interviewId }: { interviewId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details className="mt-3 rounded-md border p-3" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary className="cursor-pointer text-sm font-medium">Full interview transcript</summary>
+      {open && <div className="mt-3"><Transcript interviewId={interviewId} /></div>}
+    </details>
   );
 }

@@ -11,6 +11,7 @@ import {
   type InterviewState,
 } from "./interview-prompts";
 import { findProhibitedTopic } from "./guardrails";
+import { normaliseCompetencies, quoteInTranscript } from "./evaluation";
 import { computeSalaryAlignment, salaryNeedsHumanReview } from "./salary";
 
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
@@ -38,6 +39,12 @@ function profileText(c: any) {
 
 async function audit(sb: SB, userId: string | null, action: string, type: string, id: string | null, metadata = {}) {
   await sb.from("audit_logs").insert({ actor_id: userId, action, entity_type: type, entity_id: id, metadata });
+}
+
+/** Privileged writer for AI/workflow rows. Only call after the caller's access was verified with their own client. */
+async function writer(): Promise<SB> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as SB;
 }
 
 async function activeBand(sb: SB, jobRoleId: string | null) {
@@ -130,11 +137,12 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
       }[];
     let msgs = await loadMsgs();
 
+    const w = await writer();
     if (data.text) {
-      const dup = data.clientMessageId && msgs.some((m) => m.client_message_id === data.clientMessageId);
-      if (!dup) {
+      let saved = !!data.clientMessageId && msgs.some((m) => m.client_message_id === data.clientMessageId);
+      for (let attempt = 0; attempt < 4 && !saved; attempt++) {
         const seq = (msgs.at(-1)?.sequence_number ?? 0) + 1;
-        const { error } = await sb.from("interview_messages").insert({
+        const { error } = await w.from("interview_messages").insert({
           interview_id: iv.id,
           sender_type: "candidate",
           message: data.text,
@@ -142,10 +150,14 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
           client_message_id: data.clientMessageId ?? null,
           section: iv.current_section,
         });
-        if (error && error.code !== "23505")
-          return { ok: false as const, error: "Your answer could not be saved. Please try again." };
         msgs = await loadMsgs();
+        if (!error) saved = true;
+        else if (error.code === "23505") {
+          // Either this exact answer was already saved (retry) or another message took the sequence slot.
+          saved = !!data.clientMessageId && msgs.some((m) => m.client_message_id === data.clientMessageId);
+        } else return { ok: false as const, error: "Your answer could not be saved. Please try again." };
       }
+      if (!saved) return { ok: false as const, error: "Your answer could not be saved. Please try again." };
     }
 
     const last = msgs.at(-1);
@@ -227,25 +239,26 @@ async function turnHandler({ data, context }: { data: { interviewId: string; tex
     const t = turn as z.infer<typeof TurnSchema>;
     const section: string = SECTIONS.some((s) => s.key === t.section) ? t.section : iv.current_section;
     const seq = (msgs.at(-1)?.sequence_number ?? 0) + 1;
-    const { error: insErr } = await sb.from("interview_messages").insert({
+    const { error: insErr } = await w.from("interview_messages").insert({
       interview_id: iv.id,
       sender_type: "ai",
       message: t.message,
       sequence_number: seq,
       section,
     });
-    if (insErr && insErr.code !== "23505")
-      return { ok: false as const, error: "Could not save the interviewer's message. Please retry." };
+    if (insErr?.code === "23505") return { ok: true as const, generated: false, complete: false }; // another request answered first
+    if (insErr) return { ok: false as const, error: "Could not save the interviewer's message. Please retry." };
 
     const newState: InterviewState = {
       topics_covered: Array.from(new Set([...state.topics_covered, ...t.topics_covered])).slice(0, 60),
       unresolved_followups: t.unresolved_followups.slice(0, 20),
       questions_asked: state.questions_asked + 1,
     };
-    await sb
+    const { error: stErr } = await w
       .from("interviews")
       .update({ current_section: section, state: { ...newState, ai_marked_complete: t.interview_complete } })
       .eq("id", iv.id);
+    if (stErr) return { ok: false as const, error: "Could not update the interview progress. Please retry." };
     return { ok: true as const, generated: true, complete: t.interview_complete };
 }
 
@@ -285,6 +298,7 @@ const EvalSchema = z.object({
   availability: z.string().nullable().default(null),
   expected_salary_amount: z.number().nullable().default(null),
   expected_salary_text: z.string().nullable().default(null),
+  expected_salary_currency: z.string().nullable().default(null),
   competencies: z.array(CompSchema).min(1),
   red_flags: z
     .array(z.object({ flag: z.string(), evidence: z.string(), severity: z.enum(["low", "medium", "high"]).default("medium") }))
@@ -306,16 +320,18 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
       .maybeSingle();
     if (!iv) return { ok: false as const, error: "Interview not found." };
     if (iv.status === "evaluated") return { ok: true as const };
+    const w = await writer();
 
     if (iv.status === "in_progress") {
-      await sb.from("interviews").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", iv.id);
-      await sb.from("candidates").update({ status: "evaluation_pending" }).eq("id", iv.candidate_id);
-      await audit(sb, context.userId, "interview.completed", "interview", iv.id);
+      const { error: cErr } = await w.from("interviews").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", iv.id).eq("status", "in_progress");
+      if (cErr) return { ok: false as const, error: "Could not close the interview. Please retry." };
+      await w.from("candidates").update({ status: "evaluation_pending" }).eq("id", iv.candidate_id);
+      await audit(w, context.userId, "interview.completed", "interview", iv.id);
     }
 
     const { data: msgs } = await sb
       .from("interview_messages")
-      .select("sender_type, message")
+      .select("sender_type, message, sequence_number")
       .eq("interview_id", iv.id)
       .order("sequence_number");
     const transcript = (msgs ?? [])
@@ -360,20 +376,29 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
       failure = e instanceof AIError ? e.message : "The AI evaluation service failed.";
     }
 
-    const expected =
-      iv.candidates?.expected_compensation != null ? Number(iv.candidates.expected_compensation) : (ev?.expected_salary_amount ?? null);
-    const alignment = computeSalaryAlignment(expected, band);
+    // Salary precedence: the candidate's own statement in the interview wins over a pre-entered value;
+    // a disagreement between the two, or a currency other than the band's, goes to a human.
+    const recorded = iv.candidates?.expected_compensation != null ? Number(iv.candidates.expected_compensation) : null;
+    const stated = ev?.expected_salary_amount ?? null;
+    const expected = stated ?? recorded;
+    const statedCurrency = (ev?.expected_salary_currency ?? "").trim().toUpperCase() || null;
+    const bandCurrency = (band?.currency as string | undefined) ?? "INR";
+    const currencyMismatch = !!statedCurrency && stated != null && statedCurrency !== bandCurrency.toUpperCase();
+    const salaryConflict = stated != null && recorded != null && Math.abs(stated - recorded) > 0.5;
+    const alignment = currencyMismatch ? "pending_review" : computeSalaryAlignment(expected, band);
     const salaryBase = {
       expected_salary: expected,
-      salary_currency: band?.currency ?? "INR",
+      salary_currency: currencyMismatch ? statedCurrency : bandCurrency,
       band_min: band?.minimum_salary ?? null,
       band_max: band?.maximum_salary ?? null,
       salary_alignment: alignment,
     };
 
+    const { data: existingSc } = await w.from("scorecards").select("id, ai_notes, reviewer_status, review_reasons").eq("interview_id", iv.id).maybeSingle();
+
     if (!ev) {
-      await sb.from("interviews").update({ status: "evaluation_failed" }).eq("id", iv.id);
-      await sb.from("scorecards").upsert(
+      await w.from("interviews").update({ status: "evaluation_failed" }).eq("id", iv.id);
+      await w.from("scorecards").upsert(
         {
           candidate_id: iv.candidate_id,
           interview_id: iv.id,
@@ -385,18 +410,20 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
         },
         { onConflict: "interview_id" },
       );
-      await sb.from("candidates").update({ status: "human_review" }).eq("id", iv.candidate_id);
-      await audit(sb, context.userId, "evaluation.failed", "interview", iv.id);
+      await w.from("candidates").update({ status: "human_review" }).eq("id", iv.candidate_id);
+      await audit(w, context.userId, "evaluation.failed", "interview", iv.id);
       return { ok: false as const, error: failure || "Evaluation failed. The transcript is safe — you can retry." };
     }
 
-    // normalise: no invented scores, no evidence-less red flags
-    const competencies = ev.competencies.map((c) => ({
-      ...c,
-      score: c.assessed && c.score != null ? Math.round(c.score) : null,
-      assessed: c.assessed && c.score != null,
-    }));
-    const redFlags = ev.red_flags.filter((r) => r.evidence.trim().length > 0);
+    // normalise: full competency set, no invented or evidence-less scores, red flags tied to the transcript
+    const competencies = normaliseCompetencies(ev.competencies);
+    const candidateText = (msgs ?? [])
+      .filter((m: { sender_type: string }) => m.sender_type === "candidate")
+      .map((m: { message: string }) => m.message)
+      .join("\n");
+    const redFlags = ev.red_flags
+      .filter((r) => r.evidence.trim().length > 0)
+      .map((r) => ({ ...r, verified: quoteInTranscript(r.evidence, candidateText) }));
     const notAssessed = competencies.filter((c) => !c.assessed).length;
 
     const reasons: string[] = [];
@@ -411,13 +438,17 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
               : "Expected salary not captured",
       );
     }
+    if (currencyMismatch) reasons.push(`Salary stated in ${statedCurrency}, band is in ${bandCurrency} — confirm with candidate`);
+    if (salaryConflict) reasons.push("Interview salary differs from the recruiter-entered expectation");
     if (redFlags.length) reasons.push(`${redFlags.length} red flag(s) identified`);
+    if (redFlags.some((r) => !r.verified)) reasons.push("Red flag evidence could not be matched to the transcript");
     if (notAssessed >= 3) reasons.push("Insufficient evidence for several competencies");
     if (iv.candidates?.notice_period_days == null && !ev.notice_period) reasons.push("Missing critical information: notice period");
     if (ev.recommendation === "not_recommended") reasons.push("AI advises not recommended — human confirmation required");
+    if (ev.recommendation === "hold_review") reasons.push("AI recommends hold — human decision required");
     const reviewRequired = reasons.length > 0;
 
-    const { error: evErr } = await sb.from("interview_evaluations").upsert(
+    const { error: evErr } = await w.from("interview_evaluations").upsert(
       {
         interview_id: iv.id,
         candidate_id: iv.candidate_id,
@@ -437,6 +468,7 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
           notice_period: ev.notice_period,
           availability: ev.availability,
           expected_salary_text: ev.expected_salary_text,
+          expected_salary_currency: ev.expected_salary_currency,
           suggested_follow_up_questions: ev.suggested_follow_up_questions,
           recommendation_rationale: ev.recommendation_rationale,
         },
@@ -445,8 +477,10 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
     );
     if (evErr) return { ok: false as const, error: "Could not save the evaluation. Please retry." };
 
-    const { data: existingSc } = await sb.from("scorecards").select("id, ai_notes").eq("interview_id", iv.id).maybeSingle();
-    const { error: scErr } = await sb.from("scorecards").upsert(
+    // Keep a human decision already recorded on a real (non-failure) scorecard.
+    const wasFailure = (existingSc?.review_reasons ?? []).includes("AI evaluation failure");
+    const keepDecision = !!existingSc && !wasFailure && !["pending", "not_required"].includes(existingSc.reviewer_status);
+    const { error: scErr } = await w.from("scorecards").upsert(
       {
         candidate_id: iv.candidate_id,
         interview_id: iv.id,
@@ -454,7 +488,7 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
         final_recommendation: ev.recommendation,
         review_required: reviewRequired,
         review_reasons: reasons,
-        reviewer_status: reviewRequired ? "pending" : "not_required",
+        reviewer_status: keepDecision ? existingSc!.reviewer_status : reviewRequired ? "pending" : "not_required",
         ai_notes: existingSc?.ai_notes || ev.ai_notes,
         updated_at: new Date().toISOString(),
       },
@@ -462,12 +496,12 @@ async function evaluateHandler({ data, context }: { data: { interviewId: string 
     );
     if (scErr) return { ok: false as const, error: "Could not save the scorecard. Please retry." };
 
-    await sb.from("interviews").update({ status: "evaluated" }).eq("id", iv.id);
-    await sb
+    await w.from("interviews").update({ status: "evaluated" }).eq("id", iv.id);
+    await w
       .from("candidates")
       .update({ status: reviewRequired ? "human_review" : ev.recommendation === "recommend_final" ? "recommended" : "on_hold" })
       .eq("id", iv.candidate_id);
-    await audit(sb, context.userId, "evaluation.saved", "interview", iv.id, { reviewRequired, alignment });
+    await audit(w, context.userId, "evaluation.saved", "interview", iv.id, { reviewRequired, alignment });
     return { ok: true as const };
 }
 
@@ -517,8 +551,10 @@ export const recordReview = createServerFn({ method: "POST" })
     const { data: sc } = await sb.from("scorecards").select("*").eq("id", data.scorecardId).maybeSingle();
     if (!sc) throw new Error("Scorecard not found.");
     const newStatus = ACTIONS[data.action];
-    await sb.from("scorecards").update({ reviewer_status: newStatus, updated_at: new Date().toISOString() }).eq("id", sc.id);
-    await sb.from("review_actions").insert({
+    const w = await writer();
+    const { error: uErr } = await w.from("scorecards").update({ reviewer_status: newStatus, updated_at: new Date().toISOString() }).eq("id", sc.id);
+    if (uErr) throw new Error("Could not save the review decision. Please retry.");
+    const { error: aErr } = await w.from("review_actions").insert({
       scorecard_id: sc.id,
       reviewer_id: context.userId,
       action: data.action,
@@ -526,14 +562,17 @@ export const recordReview = createServerFn({ method: "POST" })
       new_status: newStatus,
       comments: data.comments || null,
     });
-    if (data.comments)
-      await sb.from("reviewer_notes").insert({
+    if (aErr) throw new Error("Decision saved, but its history entry failed. Please retry.");
+    if (data.comments) {
+      const { error: nErr } = await w.from("reviewer_notes").insert({
         candidate_id: sc.candidate_id,
         interview_id: sc.interview_id,
         reviewer_id: context.userId,
         note_type: "reviewer",
         note: data.comments,
       });
+      if (nErr) throw new Error("Decision saved, but the comment could not be stored.");
+    }
     const candStatus =
       data.action === "approve"
         ? sc.final_recommendation === "recommend_final"
@@ -541,11 +580,14 @@ export const recordReview = createServerFn({ method: "POST" })
           : sc.final_recommendation === "not_recommended"
             ? "not_recommended"
             : "on_hold"
-        : data.action === "return"
-          ? "human_review"
-          : "on_hold";
-    await sb.from("candidates").update({ status: candStatus }).eq("id", sc.candidate_id);
-    await audit(sb, context.userId, `review.${data.action}`, "scorecard", sc.id, { from: sc.reviewer_status, to: newStatus });
+        : data.action === "reject"
+          ? "not_recommended"
+          : data.action === "return"
+            ? "human_review"
+            : "on_hold";
+    const { error: cErr } = await w.from("candidates").update({ status: candStatus }).eq("id", sc.candidate_id);
+    if (cErr) throw new Error("Decision saved, but the candidate status could not be updated.");
+    await audit(w, context.userId, `review.${data.action}`, "scorecard", sc.id, { from: sc.reviewer_status, to: newStatus });
     return { ok: true };
   });
 
@@ -553,8 +595,13 @@ export const recordReview = createServerFn({ method: "POST" })
 const TokenSchema = z.object({ token: z.string().uuid() });
 async function adminByToken(token: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("interviews").select("id, status").eq("invite_token", token).maybeSingle();
-  return { admin: supabaseAdmin as SB, iv: data as { id: string; status: string } | null };
+  const { data } = await supabaseAdmin
+    .from("interviews")
+    .select("id, status, expires_at, revoked_at")
+    .eq("invite_token", token)
+    .maybeSingle();
+  const usable = data && !data.revoked_at && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now());
+  return { admin: supabaseAdmin as SB, iv: usable ? ({ id: data.id, status: data.status } as { id: string; status: string }) : null };
 }
 
 /** Candidate-safe view: no notes, salary bands, scores, flags or HR controls. */
@@ -568,11 +615,11 @@ export const getCandidateSession = createServerFn({ method: "POST" })
       .select("id, status, current_section, experience_category, duration_minutes, started_at, state, candidates(full_name), job_roles(title)")
       .eq("id", iv.id)
       .single();
-    const { data: msgs } = await admin
-      .from("interview_messages")
-      .select("id, sender_type, message, sequence_number")
-      .eq("interview_id", iv.id)
-      .order("sequence_number");
+    // After the interview ends the candidate only sees a thank-you screen, not the transcript.
+    const { data: msgs } =
+      row.status === "in_progress"
+        ? await admin.from("interview_messages").select("id, sender_type, message, sequence_number").eq("interview_id", iv.id).order("sequence_number")
+        : { data: [] };
     return {
       status: row.status as string,
       section: row.current_section as string,
@@ -600,18 +647,29 @@ export const candidateFinish = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => TokenSchema.parse(d))
   .handler(async ({ data }) => {
     const { admin, iv } = await adminByToken(data.token);
-    if (!iv) return { ok: false as const };
+    if (!iv) return { ok: false as const, error: "This interview link is no longer valid." };
     const r = await evaluateHandler({ data: { interviewId: iv.id }, context: { supabase: admin, userId: null } });
     // Never leak evaluation details to the candidate.
-    return { ok: r.ok };
+    return r.ok ? { ok: true as const } : { ok: false as const, error: "We couldn't submit your interview just now. Your answers are saved — please try again." };
   });
 
 /* ---------------- demo helpers (competition demo; no login wall) ---------------- */
 const DEMO_EMAIL = "hr-demo@aria-hr.demo";
 
 /** One-click HR demo sign-in: ensures a demo admin exists and returns a one-time login token. */
+async function demoEnabled(a: SB) {
+  const { data } = await a.from("app_settings").select("value").eq("key", "demo_enabled").maybeSingle();
+  return data?.value !== false;
+}
+
+export const getDemoStatus = createServerFn({ method: "POST" }).handler(async () => {
+  const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+  return { enabled: await demoEnabled(a) };
+});
+
 export const demoHrSignIn = createServerFn({ method: "POST" }).handler(async () => {
   const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+  if (!(await demoEnabled(a))) throw new Error("Demo access has been switched off by an admin.");
   const link = async () => a.auth.admin.generateLink({ type: "magiclink", email: DEMO_EMAIL });
   let r = await link();
   if (r.error) {
@@ -627,11 +685,26 @@ export const demoHrSignIn = createServerFn({ method: "POST" }).handler(async () 
 /** Public demo presets: only candidate first names + invite tokens; no HR data. */
 export const getDemoPresets = createServerFn({ method: "POST" }).handler(async () => {
   const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
-  const { data: active } = await a.from("interviews").select("invite_token, candidates(full_name)").eq("status", "in_progress").order("started_at", { ascending: false }).limit(3);
-  const { data: done } = await a.from("scorecards").select("id, candidates(full_name)").eq("review_required", true).order("created_at", { ascending: false }).limit(1);
+  if (!(await demoEnabled(a))) return { enabled: false, active: [], exception: null };
+  // Only synthetic demo candidates are ever listed publicly — never real invite links.
+  const { data: active } = await a
+    .from("interviews")
+    .select("invite_token, candidates!inner(full_name, is_demo)")
+    .eq("status", "in_progress")
+    .eq("candidates.is_demo", true)
+    .order("started_at", { ascending: false })
+    .limit(3);
+  const { data: done } = await a
+    .from("scorecards")
+    .select("id, candidates!inner(full_name, is_demo)")
+    .eq("review_required", true)
+    .eq("candidates.is_demo", true)
+    .order("created_at", { ascending: false })
+    .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const first = (c: any) => String(c?.full_name ?? "Candidate").split(" ")[0];
   return {
+    enabled: true,
     active: (active ?? []).map((r) => ({ token: r.invite_token as string, name: first(r.candidates) })),
     exception: done?.[0] ? { scorecardId: done[0].id as string, name: first(done[0].candidates) } : null,
   };
@@ -642,6 +715,7 @@ export const createFreshDemoSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ category: z.enum(["fresher", "experienced"]) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin: a } = await import("@/integrations/supabase/client.server");
+    if (!(await demoEnabled(a))) throw new Error("Demo access has been switched off by an admin.");
     const { data: role } = await a.from("job_roles").select("id, title").order("created_at").limit(1).maybeSingle();
     const { data: owner } = await a.from("user_roles").select("user_id").eq("role", "admin").limit(1).maybeSingle();
     if (!owner) throw new Error("Sign in as HR Demo once first to set up the demo workspace.");
@@ -653,6 +727,7 @@ export const createFreshDemoSession = createServerFn({ method: "POST" })
       years_of_experience: exp ? 0 : 3,
       job_role_id: role?.id ?? null,
       status: "in_progress",
+      is_demo: true,
       created_by: owner.user_id,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any).select("id").single();
@@ -689,3 +764,4 @@ export const parseResume = createServerFn({ method: "POST" })
       return { ok: false as const, error: e instanceof AIError ? e.message : "Could not read the resume." };
     }
   });
+

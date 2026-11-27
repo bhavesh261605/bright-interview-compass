@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, MessagesSquare, Users } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { Empty, Kpi, Loading, PageHeader, Section, StatusPill } from "@/components/app/ui-bits";
 import { CANDIDATE_STATUS, RECOMMENDATION, formatDate, passThroughRate } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 function Dashboard() {
+  const { roles: myRoles } = useAuth();
+  const canRun = can(myRoles, "run_interviews");
   const q = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -53,7 +57,7 @@ function Dashboard() {
       <PageHeader
         title="Dashboard"
         description="Live figures from your interview records."
-        actions={<Button asChild><Link to="/candidates/new">Add candidate</Link></Button>}
+        actions={canRun && <Button asChild><Link to="/candidates/new">Add candidate</Link></Button>}
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="Total candidates" value={candidates.length} icon={Users} />

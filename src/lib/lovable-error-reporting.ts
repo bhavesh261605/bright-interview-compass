@@ -30,7 +30,7 @@ export function reportLovableError(error: unknown, context: Record<string, unkno
     error,
     {
       source: "react_error_boundary",
-      route: window.location.pathname,
+      route: redactPath(window.location.pathname),
       ...context,
     },
     {
@@ -46,7 +46,7 @@ export function reportLovableError(error: unknown, context: Record<string, unkno
   window.__lovableReportRuntimeError?.({
     message: describeThrown(error),
     ...(stack !== undefined && { stack }),
-    filename: window.location.pathname,
+    filename: redactPath(window.location.pathname),
   });
 }
 
@@ -67,4 +67,9 @@ function describeThrown(error: unknown): string {
   } catch {
     return String(error);
   }
+}
+
+/** Interview invite tokens are credentials: never send them to telemetry. */
+function redactPath(p: string) {
+  return p.replace(/^\/interview\/[^/]+/, "/interview/[token]");
 }

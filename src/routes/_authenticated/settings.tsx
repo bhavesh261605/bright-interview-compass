@@ -29,6 +29,7 @@ const ROLES: AppRole[] = ["admin", "recruiter", "reviewer"];
 
 function SettingsPage() {
   const { user, roles, refreshRoles } = useAuth();
+  const [savingName, setSavingName] = useState(false);
   const isAdmin = roles.includes("admin");
   const qc = useQueryClient();
   const [name, setName] = useState("");
@@ -43,6 +44,7 @@ function SettingsPage() {
     queryFn: async () => (await supabase.from("app_settings").select("*")).data ?? [],
   });
   const model = (settings.data?.find((s) => s.key === "ai_model")?.value as string) ?? MODELS[0];
+  const demoOn = settings.data?.find((s) => s.key === "demo_enabled")?.value !== false;
   const weights = (settings.data?.find((s) => s.key === "competency_weights")?.value as Record<string, number>) ?? {};
   const [w, setW] = useState<Record<string, number>>({});
   useEffect(() => setW(weights), [settings.data]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -62,8 +64,11 @@ function SettingsPage() {
   });
 
   const saveName = async () => {
+    setSavingName(true);
     const { error } = await supabase.from("profiles").update({ full_name: name }).eq("id", user!.id);
+    setSavingName(false);
     if (error) { toast.error(error.message); return; }
+    await refreshRoles();
     toast.success("Profile saved");
   };
   const saveSetting = async (key: string, value: unknown) => {
@@ -89,9 +94,9 @@ function SettingsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Your profile">
           <div className="space-y-3">
-            <div className="space-y-1.5"><Label>Full name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="profile-name">Full name</Label><Input id="profile-name" value={name} onChange={(e) => setName(e.target.value)} /></div>
             <div className="text-sm text-muted-foreground">{user?.email} · {roles.join(", ")}</div>
-            <Button size="sm" onClick={saveName}>Save</Button>
+            <Button size="sm" onClick={saveName} disabled={savingName}>{savingName ? "Saving…" : "Save"}</Button>
           </div>
         </Section>
         <Section title="AI interviewer model (Gemini)">
@@ -119,6 +124,23 @@ function SettingsPage() {
         {isAdmin && <Button size="sm" className="mt-3" onClick={() => saveSetting("competency_weights", w)}>Save weights</Button>}
         <p className="mt-2 text-xs text-muted-foreground">Default weights are equal (an assumption). No pass/fail threshold is applied.</p>
       </Section>
+
+      {isAdmin && (
+        <Section title="Public demo access">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-xl text-sm text-muted-foreground">
+              When on, anyone with the site link can enter as the HR demo admin and open demo interviews. Only demo candidates are listed publicly. Turn this off before using real candidate data.
+            </p>
+            <Button
+              size="sm"
+              variant={demoOn ? "destructive" : "default"}
+              onClick={() => saveSetting("demo_enabled", !demoOn)}
+            >
+              {demoOn ? "Turn demo off" : "Turn demo on"}
+            </Button>
+          </div>
+        </Section>
+      )}
 
       {isAdmin && (
         <>

@@ -43,6 +43,8 @@ function CandidateRoom() {
   const [finishing, setFinishing] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceOn, setVoiceOn] = useState(true);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const spokenRef = useRef<string | null>(null);
   const recRef = useRef<SpeechRec>(null);
   const started = useRef(false);
@@ -107,11 +109,30 @@ function CandidateRoom() {
       setText((p) => (p ? p + " " : "") + t.trim());
     };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onerror = (e: any) => {
+      setListening(false);
+      const code = e?.error as string | undefined;
+      setMicError(
+        code === "not-allowed" || code === "service-not-allowed"
+          ? "Microphone access was blocked. Allow it in your browser settings, or type your answer."
+          : code === "audio-capture"
+            ? "No microphone was found. Please type your answer."
+            : code === "no-speech"
+              ? "We didn't hear anything. Try again or type your answer."
+              : "Dictation stopped unexpectedly. You can type your answer instead.",
+      );
+    };
     recRef.current = rec;
-    rec.start();
-    setListening(true);
+    setMicError(null);
+    try {
+      rec.start();
+      setListening(true);
+    } catch {
+      setMicError("Dictation couldn't start. Please type your answer.");
+    }
   };
+  useEffect(() => () => { try { recRef.current?.stop(); } catch { /* already stopped */ } }, []);
 
   if (s.isLoading) return <Loading />;
   const d = s.data;
@@ -159,8 +180,8 @@ function CandidateRoom() {
     );
 
   const list = [...d.messages];
-  const lastCand = [...list].reverse().find((m) => m.sender_type === "candidate");
-  if (pending && lastCand?.message !== pending.message) list.push({ id: pending.id, sender_type: "candidate", message: pending.message, sequence_number: 1e9 });
+  const pendingSaved = !!pending && d.messages.some((m) => m.id === pending.id || (m as { client_message_id?: string }).client_message_id === pending.id);
+  if (pending && !pendingSaved && thinking) list.push({ id: pending.id, sender_type: "candidate", message: pending.message, sequence_number: 1e9 });
   const awaitingAI = !thinking && d.messages.at(-1)?.sender_type === "candidate";
   const idx = Math.max(0, SECTIONS.findIndex((x) => x.key === d.section));
 
@@ -173,20 +194,31 @@ function CandidateRoom() {
     setText("");
     await turn({ text: t, clientMessageId: cid });
   };
-  const retry = () => (pending && !d.messages.some((m) => m.message === pending.message) ? turn({ text: pending.message, clientMessageId: pending.id }) : turn({}));
+  // The server de-duplicates by client message ID, so resending a pending answer is always safe.
+  const retry = () => (pending ? turn({ text: pending.message, clientMessageId: pending.id }) : turn({}));
   const finish = async () => {
+    if (listening) recRef.current?.stop();
     setFinishing(true);
-    await candidateFinish({ data: { token } }).catch(() => null);
+    setFinishError(null);
+    try {
+      const r = await candidateFinish({ data: { token } });
+      if (!r.ok) setFinishError(r.error);
+    } catch {
+      setFinishError("Connection problem — your answers are saved. Please try submitting again.");
+    }
     await qc.invalidateQueries({ queryKey: key });
     setFinishing(false);
   };
+  const unsent = !!pending && !thinking;
 
   return shell(
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-3 sm:p-4" style={{ height: "calc(100vh - 3.5rem)" }}>
       <div className="mb-3 flex items-center gap-3 text-xs text-muted-foreground">
         <span className="whitespace-nowrap">{SECTIONS[idx]?.label}</span>
         <Progress value={((idx + 1) / SECTIONS.length) * 100} className="h-1.5" />
-        <span className="flex items-center gap-1 whitespace-nowrap"><ShieldCheck className="h-3.5 w-3.5" />Saved</span>
+        <span className={cn("flex items-center gap-1 whitespace-nowrap", unsent && "text-destructive")} aria-live="polite">
+          <ShieldCheck className="h-3.5 w-3.5" />{thinking ? "Saving…" : unsent ? "Not sent" : "All answers saved"}
+        </span>
       </div>
       <div className="surface flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -198,18 +230,30 @@ function CandidateRoom() {
               <div className={cn("max-w-[80%] whitespace-pre-wrap rounded-lg px-3.5 py-2.5 text-sm leading-relaxed", m.sender_type === "ai" ? "bg-muted" : "bg-primary text-primary-foreground")}>{m.message}</div>
             </div>
           ))}
-          {thinking && <div className="text-sm text-muted-foreground">Aria is typing…</div>}
-          {(error || awaitingAI) && !thinking && (
-            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              <span className="flex-1">{error ?? "Aria hasn't replied yet."}</span>
+          {thinking && (
+            <div className="flex items-center gap-3" aria-live="polite">
+              <div className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 text-primary"><Bot className="h-4 w-4" /></div>
+              <div className="flex gap-1 rounded-lg bg-muted px-3.5 py-3" aria-label="Aria is typing">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
+              </div>
+            </div>
+          )}
+          {(error || awaitingAI || unsent) && !thinking && (
+            <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              <span className="flex-1">{error ?? (unsent ? `Your last answer wasn't sent: “${pending!.message.slice(0, 60)}${pending!.message.length > 60 ? "…" : ""}”` : "Aria hasn't replied yet.")}</span>
               <Button size="sm" variant="outline" onClick={() => void retry()}><RefreshCw className="mr-1 h-3.5 w-3.5" />Retry</Button>
             </div>
           )}
           {d.aiDone && (
             <div className="flex items-center justify-between gap-2 rounded-md border border-success/30 bg-success/5 p-3 text-sm text-success">
               <span>That's all the questions. Submit when you're ready.</span>
-              <Button size="sm" onClick={finish} disabled={finishing}>{finishing ? "Submitting…" : "Submit interview"}</Button>
+              <Button size="sm" onClick={finish} disabled={finishing}>{finishing ? "Submitting…" : finishError ? "Try again" : "Submit interview"}</Button>
             </div>
+          )}
+          {finishError && (
+            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{finishError}</div>
           )}
           <div ref={endRef} />
         </div>
@@ -227,7 +271,8 @@ function CandidateRoom() {
               <Button size="icon" onClick={() => void send()} disabled={!text.trim() || thinking} aria-label="Send"><Send className="h-4 w-4" /></Button>
             </div>
           </div>
-          {!d.aiDone && <button className="mt-2 text-xs text-muted-foreground hover:text-foreground" onClick={finish} disabled={finishing}>End interview early</button>}
+          {micError && <p role="status" className="mt-2 text-xs text-destructive">{micError}</p>}
+          {!d.aiDone && <button className="mt-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => { if (window.confirm("End the interview now? You won't be able to answer more questions.")) void finish(); }} disabled={finishing}>{finishing ? "Submitting…" : "End interview early"}</button>}
         </div>
       </div>
     </div>,

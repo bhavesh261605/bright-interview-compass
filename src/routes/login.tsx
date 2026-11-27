@@ -137,7 +137,7 @@ function Login() {
               </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">The first account becomes the admin. New accounts join as recruiters.</p>
+          <p className="text-xs text-muted-foreground">New accounts need an admin to grant access before they can see HR data.</p>
         </form>
       </div>
     </div>

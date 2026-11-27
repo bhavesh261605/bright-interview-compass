@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { fetchJobRoles } from "@/lib/queries";
 import { CANDIDATE_STATUS, EXPERIENCE, formatDate } from "@/lib/labels";
 import { Empty, Loading, PageHeader, StatusPill } from "@/components/app/ui-bits";
@@ -19,6 +21,8 @@ export const Route = createFileRoute("/_authenticated/candidates/")({
 });
 
 function Candidates() {
+  const { roles: myRoles } = useAuth();
+  const canRun = can(myRoles, "run_interviews");
   const { q: initialQ } = Route.useSearch();
   const [q, setQ] = useState(initialQ ?? "");
   const [exp, setExp] = useState("all");
@@ -49,7 +53,7 @@ function Candidates() {
       <PageHeader
         title="Candidates"
         description="Profiles, HR details and interview status."
-        actions={<Button asChild><Link to="/candidates/new"><Plus className="mr-1 h-4 w-4" />Add candidate</Link></Button>}
+        actions={canRun && <Button asChild><Link to="/candidates/new"><Plus className="mr-1 h-4 w-4" />Add candidate</Link></Button>}
       />
       <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <Input placeholder="Search name, email, skill…" value={q} onChange={(e) => setQ(e.target.value)} className="lg:col-span-2" />

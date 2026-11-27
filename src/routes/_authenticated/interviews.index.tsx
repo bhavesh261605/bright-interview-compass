@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { EXPERIENCE, INTERVIEW_STATUS, formatDate } from "@/lib/labels";
 import { Empty, Loading, PageHeader, StatusPill } from "@/components/app/ui-bits";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/interviews/")({
 });
 
 function Interviews() {
+  const { roles: myRoles } = useAuth();
+  const canRun = can(myRoles, "run_interviews");
   const q = useQuery({
     queryKey: ["interviews"],
     queryFn: async () => {
@@ -22,7 +26,7 @@ function Interviews() {
   });
   return (
     <div>
-      <PageHeader title="Interviews" description="Live and completed HR rounds." actions={<Button asChild><Link to="/interviews/new" search={{}}>New interview</Link></Button>} />
+      <PageHeader title="Interviews" description="Live and completed HR rounds." actions={canRun && <Button asChild><Link to="/interviews/new" search={{}}>New interview</Link></Button>} />
       {q.isLoading ? <Loading /> : (q.data ?? []).length === 0 ? <Empty title="No interviews yet">Start one from a candidate's profile.</Empty> : (
         <div className="surface overflow-x-auto">
           <Table>

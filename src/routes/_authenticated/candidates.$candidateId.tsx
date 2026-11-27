@@ -5,6 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Download, Pencil, PlayCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { CANDIDATE_STATUS, EXPERIENCE, INTERVIEW_STATUS, RECOMMENDATION, SALARY_ALIGNMENT, formatDate, formatMoney } from "@/lib/labels";
 import { validateSalary } from "@/lib/interview.functions";
 import { Empty, Field, Loading, PageHeader, Section, StatusPill } from "@/components/app/ui-bits";
@@ -20,6 +22,8 @@ export const Route = createFileRoute("/_authenticated/candidates/$candidateId")(
 });
 
 function CandidateDetail() {
+  const { roles: myRoles } = useAuth();
+  const canRun = can(myRoles, "run_interviews");
   const { candidateId } = Route.useParams();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -70,7 +74,7 @@ function CandidateDetail() {
             {active ? (
               <Button asChild><Link to="/interviews/$interviewId" params={{ interviewId: active.id }}><PlayCircle className="mr-1 h-4 w-4" />Resume interview</Link></Button>
             ) : (
-              <Button asChild><Link to="/interviews/new" search={{ candidateId: c.id }}><PlayCircle className="mr-1 h-4 w-4" />Start interview</Link></Button>
+              canRun && <Button asChild><Link to="/interviews/new" search={{ candidateId: c.id }}><PlayCircle className="mr-1 h-4 w-4" />Start interview</Link></Button>
             )}
           </>
         }
@@ -147,7 +151,7 @@ function CandidateDetail() {
             {c.resume_path ? (
               <Button variant="outline" className="w-full" onClick={download}><Download className="mr-1 h-4 w-4" />Open resume (private link)</Button>
             ) : <p className="text-sm text-muted-foreground">No resume uploaded.</p>}
-            <p className="mt-2 text-xs text-muted-foreground">Automatic resume parsing isn't enabled; profile details are entered by the recruiter.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Use “Read resume & autofill” when editing to let Gemini suggest details — always check them before saving.</p>
           </Section>
           <Section title="Profile notes">
             <p className="whitespace-pre-wrap text-sm">{c.recruiter_notes || <span className="text-muted-foreground">None</span>}</p>

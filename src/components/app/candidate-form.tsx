@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, cloneElement, isValidElement, useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -183,11 +183,16 @@ export function CandidateForm({ initial, onSaved }: { initial?: Candidate; onSav
   );
 }
 
+/** Field wrapper: links its label to the first control inside via a generated id. */
 function F({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+  const id = useId();
+  const child = isValidElement(children) && !(children.props as { id?: string }).id
+    ? cloneElement(children as React.ReactElement<{ id?: string }>, { id })
+    : children;
   return (
     <div className={wide ? "space-y-1.5 sm:col-span-2" : "space-y-1.5"}>
-      <Label>{label}</Label>
-      {children}
+      <Label htmlFor={id}>{label}</Label>
+      {child}
     </div>
   );
 }

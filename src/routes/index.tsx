@@ -35,6 +35,10 @@ function Landing() {
   const hr = !!user && roles.length > 0;
 
   const asHr = async (to: () => void) => {
+    if (!hr && presets.data?.enabled === false) {
+      nav({ to: "/login" });
+      return;
+    }
     setBusy("hr");
     try {
       if (!hr) await signInAsHrDemo();
@@ -67,13 +71,15 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card/90 px-4 py-2.5 backdrop-blur">
         <img src={waeLogo.url} alt="WAE logo" className="h-8 w-auto rounded bg-card px-1" />
         <span className="font-semibold">WAE HR</span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
           <ViewSwitcher />
           {hr ? (
             <span className="hidden rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success sm:inline">HR demo mode on</span>
+          ) : presets.data?.enabled === false ? (
+            <Button size="sm" variant="outline" asChild><Link to="/login">HR sign in</Link></Button>
           ) : (
             <Button size="sm" variant="outline" onClick={() => asHr(() => {})} disabled={busy === "hr"}>
               <KeyRound className="mr-1 h-3.5 w-3.5" />{busy === "hr" ? "Signing in…" : "Sign in as HR Demo"}
@@ -89,7 +95,7 @@ function Landing() {
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Candidates join with a private link — no account, no password. HR reviews scorecards, salary alignment and red flags behind a role gate.</p>
         </div>
 
-        <section className="surface p-4">
+        {presets.data?.enabled !== false && <section className="surface p-4">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><FlaskConical className="h-4 w-4 text-primary" />Demo presets</div>
           <div className="grid gap-3 md:grid-cols-3">
             <Preset
@@ -116,7 +122,7 @@ function Landing() {
               </div>
             </div>
           </div>
-        </section>
+        </section>}
 
         <div className="grid gap-4 md:grid-cols-2">
           <section className="surface p-5">
@@ -124,7 +130,7 @@ function Landing() {
             <p className="mt-1 text-sm text-muted-foreground">Paste the interview link HR sent you.</p>
             <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); openToken(); }}>
               <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="https://…/interview/xxxxxxxx-…" />
-              <Button type="submit"><ArrowRight className="h-4 w-4" /></Button>
+              <Button type="submit" aria-label="Open interview"><ArrowRight className="h-4 w-4" /></Button>
             </form>
             <p className="mt-3 text-xs text-muted-foreground">Candidates never see HR notes, salary bands, scores, red flags or approvals.</p>
           </section>
